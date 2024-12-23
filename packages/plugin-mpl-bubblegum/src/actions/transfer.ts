@@ -98,15 +98,15 @@ export default {
         }
 
         try {
-            const { keypair: agentKeypair } = await getWalletKey(runtime, true);
+            const { keypair: agentKeypair } = await getWalletKey(runtime);
 
             const RPC_URL = runtime.getSetting("MPL_BUBBLEGUM_RPC_URL");
 
             const agentKeypairAdapter = fromWeb3JsKeypair(agentKeypair);
 
             const mplBubblegumProvider = new MplBubblegumProvider(
-                agentKeypairAdapter,
-                RPC_URL
+                RPC_URL,
+                agentKeypairAdapter
             );
 
             const { signature, result } = await mplBubblegumProvider.transfer(
