@@ -62,6 +62,12 @@ export class MplBubblegumProvider {
             throw new Error("This operation requires a keypair.");
         }
     }
+
+    public getKeypairPublicKey(): PublicKey {
+        this.ensureKeypairIsSet();
+        return this.keypair.publicKey;
+    }
+
     public findLeafAssetId(
         merkleTree: PublicKey,
         leafIndex: number
