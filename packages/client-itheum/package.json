@@ -1,0 +1,30 @@
+{
+    "name": "@elizaos/client-itheum",
+    "version": "0.1.7-alpha.1",
+    "main": "dist/index.js",
+    "type": "module",
+    "types": "dist/index.d.ts",
+    "dependencies": {
+        "@elizaos/core": "workspace:*",
+        "@elizaos/plugin-image-generation": "workspace:*",
+        "@elizaos/plugin-mpl-bubblegum": "workspace:*",
+        "@solana/web3.js": "1.95.8",
+        "@types/body-parser": "1.19.5",
+        "@types/cors": "2.8.17",
+        "@types/express": "5.0.0",
+        "body-parser": "1.20.3",
+        "cors": "2.8.5",
+        "discord.js": "14.16.3",
+        "express": "4.21.1",
+        "multer": "1.4.5-lts.1",
+        "tweetnacl": "^1.0.3"
+    },
+    "devDependencies": {
+        "tsup": "8.3.5"
+    },
+    "scripts": {
+        "build": "tsup --format esm --dts",
+        "dev": "tsup --format esm --dts --watch",
+        "lint": "eslint --fix  --cache ."
+    }
+}

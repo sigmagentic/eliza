@@ -1,4 +1,5 @@
 import {
+    Action,
     ActionExample,
     composeContext,
     Content,
@@ -37,8 +38,8 @@ const transferTemplate = `Respond with a JSON markdown block containing only the
 Example response:
 \`\`\`json
 {
-    "assetId": "54dQ8cfHsW1YfKYpmdVZhWpb9iSi6Pac82Nf7sg3bVb",
-    "newLeafOwner": "G2FAbFQPFa5qKXCetoFZQEvF9BVvCKbvUZvodpVidnoY"
+    "assetId": "6z5Luyd6wf1SZwLmWnJMHuusKVr6VPXoRJK45tBtjBf3",
+    "newLeafOwner": "4NuTGaoMZch2H6qH5utyPHpLdq1HnHYrPvVfiGKMoxXH"
 }
 \`\`\`
 
@@ -83,7 +84,7 @@ export default {
         const content = await generateObject({
             runtime,
             context: transferContext,
-            modelClass: ModelClass.LARGE,
+            modelClass: ModelClass.SMALL,
         });
 
         if (!isTransferContent(runtime, content)) {
@@ -144,22 +145,41 @@ export default {
             {
                 user: "{{user1}}",
                 content: {
-                    text: "Send BieefG47jAHCGZBxi2q87RDuHyGZyYC3vAzxpyu8pump to 9jW8FPr6BSSsemWPV22UUCzSqkVdTp6HTyPqeqyuBbCa",
+                    text: "Send 6z5Luyd6wf1SZwLmWnJMHuusKVr6VPXoRJK45tBtjBf3 to 4NuTGaoMZch2H6qH5utyPHpLdq1HnHYrPvVfiGKMoxXH",
                 },
             },
             {
                 user: "{{user2}}",
                 content: {
-                    text: "I'll send BieefG47jAHCGZBxi2q87RDuHyGZyYC3vAzxpyu8pump now...",
+                    text: "I'll send 6z5Luyd6wf1SZwLmWnJMHuusKVr6VPXoRJK45tBtjBf3 now...",
                     action: "SEND_COMPRESSED_NFT",
                 },
             },
             {
                 user: "{{user2}}",
                 content: {
-                    text: "Successfully sent BieefG47jAHCGZBxi2q87RDuHyGZyYC3vAzxpyu8pump to 9jW8FPr6BSSsemWPV22UUCzSqkVdTp6HTyPqeqyuBbCa\nTransaction: 5KtPn3DXXzHkb7VAVHZGwXJQqww39ASnrf7YkyJoF2qAGEpBEEGvRHLnnTG8ZVwKqNHMqSckWVGnsQAgfH5pbxEb",
+                    text: "Successfully sent 6z5Luyd6wf1SZwLmWnJMHuusKVr6VPXoRJK45tBtjBf3 to 4NuTGaoMZch2H6qH5utyPHpLdq1HnHYrPvVfiGKMoxXH\nTransaction: 5KtPn3DXXzHkb7VAVHZGwXJQqww39ASnrf7YkyJoF2qAGEpBEEGvRHLnnTG8ZVwKqNHMqSckWVGnsQAgfH5pbxEb",
+                },
+            },
+            {
+                user: "{{user1}}",
+                content: {
+                    text: "Send cNFT 6z5Luyd6wf1SZwLmWnJMHuusKVr6VPXoRJK45tBtjBf3 to 4NuTGaoMZch2H6qH5utyPHpLdq1HnHYrPvVfiGKMoxXH",
+                },
+            },
+            {
+                user: "{{user2}}",
+                content: {
+                    text: "I'll send 6z5Luyd6wf1SZwLmWnJMHuusKVr6VPXoRJK45tBtjBf3 now...",
+                    action: "SEND_COMPRESSED_NFT",
+                },
+            },
+            {
+                user: "{{user2}}",
+                content: {
+                    text: "Successfully sent 6z5Luyd6wf1SZwLmWnJMHuusKVr6VPXoRJK45tBtjBf3 to 4NuTGaoMZch2H6qH5utyPHpLdq1HnHYrPvVfiGKMoxXH\nTransaction: 5KtPn3DXXzHkb7VAVHZGwXJQqww39ASnrf7YkyJoF2qAGEpBEEGvRHLnnTG8ZVwKqNHMqSckWVGnsQAgfH5pbxEb",
                 },
             },
         ],
     ] as ActionExample[][],
-};
+} as Action;

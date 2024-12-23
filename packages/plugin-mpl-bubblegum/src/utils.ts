@@ -1,12 +1,7 @@
 import { IAgentRuntime } from "@elizaos/core";
-import { Keypair, PublicKey } from "@solana/web3.js";
+import { DeriveKeyProvider, TEEMode } from "@elizaos/plugin-tee";
+import { Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
-import { DeriveKeyProvider, TEEMode } from "../../plugin-tee/dist";
-
-export interface KeypairResult {
-    keypair?: Keypair;
-    publicKey?: PublicKey;
-}
 
 /**
  * Gets either a keypair or public key based on TEE mode and runtime settings
@@ -16,7 +11,7 @@ export interface KeypairResult {
  */
 export async function getWalletKey(
     runtime: IAgentRuntime
-): Promise<KeypairResult> {
+): Promise<{ keypair: Keypair }> {
     const teeMode = runtime.getSetting("TEE_MODE") || TEEMode.OFF;
 
     if (teeMode !== TEEMode.OFF) {

@@ -7,6 +7,8 @@ import { LensAgentClient } from "@elizaos/client-lens";
 import { SlackClientInterface } from "@elizaos/client-slack";
 import { TelegramClientInterface } from "@elizaos/client-telegram";
 import { TwitterClientInterface } from "@elizaos/client-twitter";
+import { ItheumClientInterface } from "@elizaos/client-itheum";
+
 import {
     AgentRuntime,
     CacheManager,
@@ -409,6 +411,13 @@ export async function initializeClients(
         clients.lens = lensClient;
     }
 
+    if (clientTypes.includes(Clients.ITHEUM)) {
+        const itheumClient = await ItheumClientInterface.start(runtime);
+        if (itheumClient) {
+            clients.itheum = itheumClient;
+        }
+    }
+
     elizaLogger.log("client keys", Object.keys(clients));
 
     // TODO: Add Slack client to the list
@@ -505,77 +514,11 @@ export async function createAgent(
         // character.plugins are handled when clients are added
         plugins: [
             bootstrapPlugin,
-            getSecret(character, "CONFLUX_CORE_PRIVATE_KEY")
-                ? confluxPlugin
-                : null,
             nodePlugin,
-            getSecret(character, "SOLANA_PUBLIC_KEY") ||
-            (getSecret(character, "WALLET_PUBLIC_KEY") &&
-                !getSecret(character, "WALLET_PUBLIC_KEY")?.startsWith("0x"))
-                ? solanaPlugin
-                : null,
             getSecret(character, "MPL_BUBBLEGUM_PRIVATE_KEY") &&
             getSecret(character, "MPL_BUBBLEGUM_RPC_URL")
                 ? mplBubblegumPlugin
                 : null,
-            (getSecret(character, "NEAR_ADDRESS") ||
-                getSecret(character, "NEAR_WALLET_PUBLIC_KEY")) &&
-            getSecret(character, "NEAR_WALLET_SECRET_KEY")
-                ? nearPlugin
-                : null,
-            getSecret(character, "EVM_PUBLIC_KEY") ||
-            (getSecret(character, "WALLET_PUBLIC_KEY") &&
-                getSecret(character, "WALLET_PUBLIC_KEY")?.startsWith("0x"))
-                ? evmPlugin
-                : null,
-            (getSecret(character, "SOLANA_PUBLIC_KEY") ||
-                (getSecret(character, "WALLET_PUBLIC_KEY") &&
-                    !getSecret(character, "WALLET_PUBLIC_KEY")?.startsWith(
-                        "0x"
-                    ))) &&
-            getSecret(character, "SOLANA_ADMIN_PUBLIC_KEY") &&
-            getSecret(character, "SOLANA_PRIVATE_KEY") &&
-            getSecret(character, "SOLANA_ADMIN_PRIVATE_KEY")
-                ? nftGenerationPlugin
-                : null,
-            getSecret(character, "ZEROG_PRIVATE_KEY") ? zgPlugin : null,
-            getSecret(character, "COINBASE_COMMERCE_KEY")
-                ? coinbaseCommercePlugin
-                : null,
-            getSecret(character, "FAL_API_KEY") ||
-            getSecret(character, "OPENAI_API_KEY") ||
-            getSecret(character, "VENICE_API_KEY") ||
-            getSecret(character, "HEURIST_API_KEY")
-                ? imageGenerationPlugin
-                : null,
-            ...(getSecret(character, "COINBASE_API_KEY") &&
-            getSecret(character, "COINBASE_PRIVATE_KEY")
-                ? [
-                      coinbaseMassPaymentsPlugin,
-                      tradePlugin,
-                      tokenContractPlugin,
-                      advancedTradePlugin,
-                  ]
-                : []),
-            ...(teeMode !== TEEMode.OFF && walletSecretSalt
-                ? [teePlugin, solanaPlugin]
-                : []),
-            getSecret(character, "COINBASE_API_KEY") &&
-            getSecret(character, "COINBASE_PRIVATE_KEY") &&
-            getSecret(character, "COINBASE_NOTIFICATION_URI")
-                ? webhookPlugin
-                : null,
-            getSecret(character, "ALCHEMY_API_KEY") ? goatPlugin : null,
-            getSecret(character, "FLOW_ADDRESS") &&
-            getSecret(character, "FLOW_PRIVATE_KEY")
-                ? flowPlugin
-                : null,
-            getSecret(character, "APTOS_PRIVATE_KEY") ? aptosPlugin : null,
-            getSecret(character, "MVX_PRIVATE_KEY") ? multiversxPlugin : null,
-            getSecret(character, "ZKSYNC_PRIVATE_KEY") ? zksyncEraPlugin : null,
-            getSecret(character, "TON_PRIVATE_KEY") ? tonPlugin : null,
-            getSecret(character, "SUI_PRIVATE_KEY") ? suiPlugin : null,
-            getSecret(character, "STORY_PRIVATE_KEY") ? storyPlugin : null,
         ].filter(Boolean),
         providers: [],
         actions: [],
