@@ -43,7 +43,7 @@ export class ItheumClient {
         elizaLogger.log("🚀 Initializing Itheum client...");
 
         const handleFetchLoop = () => {
-            this.fetchDataFromNft();
+            this.fetchDataFromNfts();
             setTimeout(
                 handleFetchLoop,
                 Number(this.runtime.getSetting("ITHEUM_FETCH_INTERVAL") || 60) *
@@ -53,7 +53,7 @@ export class ItheumClient {
         handleFetchLoop();
     }
 
-    public async fetchDataFromNft(): Promise<void> {
+    public async fetchDataFromNfts(): Promise<void> {
         elizaLogger.log("🚀 Fetching data from NFT...");
         const newNfts = await this.checkNewNfts();
 
