@@ -8,6 +8,41 @@ import {
 import nacl from "tweetnacl";
 import bs58 from "bs58";
 import { IDataNFT, IMusicPlaylist } from "./interfaces";
+import { TwitterManager } from "@elizaos/client-twitter";
+
+const twitterPostTemplate = `
+# Areas of Expertise
+{{knowledge}}
+
+# About {{agentName}} (@{{twitterUserName}}):
+{{bio}}
+{{lore}}
+{{topics}}
+
+{{providers}}
+
+{{characterPostExamples}}
+
+{{postDirections}}
+
+# Task: Generate a post in the voice and style and perspective of {{agentName}} @{{twitterUserName}} about an enthusiastic music data NFT drop/release announcement.
+Write a post that is {{adjective}} about {{topic}} (without mentioning {{topic}} directly), from the perspective of {{agentName}}.
+Your response should be 1, 2, or 3 sentences (choose the length at random).
+
+Write a social media post that announces and celebrates receiving a new  music data NFT, following these parameters:
+
+NFT Details: {{tweetContent}}
+
+Style Guidelines:
+- Use an excited, enthusiastic tone
+- Include emojis where natural
+- Format as a short announcement
+- End with the preview link
+- Maintain authentic social media voice
+- Keep the message concise but informative
+
+Write the announcement without any additional commentary or meta-discussion. Generate only the announcement post itself.
+Your response should not contain any questions. Brief, concise statements only.The total character count MUST be less than {{maxTweetLength}}. No emojis. Use \\n\\n (double spaces) between statements if there are multiple statements in your response.`;
 
 export class ItheumClient {
     private runtime: IAgentRuntime;
@@ -35,19 +70,33 @@ export class ItheumClient {
     public async start(): Promise<void> {
         elizaLogger.log("🚀 Starting Itheum client...");
         try {
-            await this.initializeClient();
+            await this.initializeClient(true); // enableSearch
         } catch (error) {
             elizaLogger.error("❌ Failed to launch Itheum client:", error);
             throw error;
         }
     }
 
-    public async initializeClient(): Promise<void> {
+    public async initializeClient(enableSearch: boolean): Promise<void> {
         elizaLogger.log("🚀 Initializing Itheum client...");
 
         const handleFetchLoop = async () => {
             const nftsDetails = await this.fetchDataFromNfts();
-            console.log(nftsDetails);
+
+            const twitterManager = new TwitterManager(
+                this.runtime,
+                enableSearch
+            );
+
+            await twitterManager.client.init();
+
+            for (const nftDetails of nftsDetails) {
+                await twitterManager.post.generateNewTweet(
+                    JSON.stringify(nftDetails),
+                    twitterPostTemplate
+                );
+            }
+
             setTimeout(
                 handleFetchLoop,
                 Number(this.runtime.getSetting("ITHEUM_FETCH_INTERVAL") || 60) *

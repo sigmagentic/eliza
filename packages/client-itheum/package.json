@@ -8,6 +8,7 @@
         "@elizaos/core": "workspace:*",
         "@elizaos/plugin-image-generation": "workspace:*",
         "@elizaos/plugin-mpl-bubblegum": "workspace:*",
+        "@elizaos/client-twitter": "workspace:*",
         "bs58": "6.0.0",
         "@solana/web3.js": "1.95.8",
         "@types/body-parser": "1.19.5",
