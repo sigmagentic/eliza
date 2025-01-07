@@ -20,3 +20,32 @@ export interface IDataNFT {
     };
     symbol: string;
 }
+
+interface MarshalManifest {
+    totalItems: number;
+    nestedStream: boolean;
+}
+
+interface DataStream {
+    category: string;
+    name: string;
+    creator: string;
+    created_on: string;
+    last_modified_on: string;
+    marshalManifest: MarshalManifest;
+}
+
+interface Track {
+    idx: number;
+    date: string;
+    category: string;
+    artist: string;
+    album: string;
+    cover_art_url: string;
+    title: string;
+}
+
+export interface IMusicPlaylist {
+    data_stream: DataStream;
+    data: Track[];
+}

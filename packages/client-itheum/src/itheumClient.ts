@@ -7,13 +7,13 @@ import {
 } from "@elizaos/plugin-mpl-bubblegum";
 import nacl from "tweetnacl";
 import bs58 from "bs58";
-import { IDataNFT } from "./interfaces";
+import { IDataNFT, IMusicPlaylist } from "./interfaces";
 
 export class ItheumClient {
     private runtime: IAgentRuntime;
     private mplBubblegumProvider: MplBubblegumProvider;
-    // TO DO: add db adapter or store in memory
-    private processedNfts: DasApiAsset[] = [];
+    // TO DO: add db adapter
+    private processedNfts: string[] = [];
     private dataMarshalApi: string;
     private chainId: string;
     private keypair: Keypair;
@@ -45,8 +45,9 @@ export class ItheumClient {
     public async initializeClient(): Promise<void> {
         elizaLogger.log("🚀 Initializing Itheum client...");
 
-        const handleFetchLoop = () => {
-            this.fetchDataFromNfts();
+        const handleFetchLoop = async () => {
+            const nftsDetails = await this.fetchDataFromNfts();
+            console.log(nftsDetails);
             setTimeout(
                 handleFetchLoop,
                 Number(this.runtime.getSetting("ITHEUM_FETCH_INTERVAL") || 60) *
@@ -56,11 +57,13 @@ export class ItheumClient {
         handleFetchLoop();
     }
 
-    public async fetchDataFromNfts(): Promise<void> {
+    public async fetchDataFromNfts(): Promise<
+        { id: string; metadata: IDataNFT; musicPlaylist: IMusicPlaylist }[]
+    > {
         elizaLogger.log("🚀 Fetching data from NFT...");
         const newNfts = await this.checkNewNfts();
 
-        const nonce = await this.preaccess(); // fetch once per all nfts
+        const nonce = await this.preaccess();
 
         const nonceEncoded = new TextEncoder().encode(nonce);
 
@@ -70,6 +73,12 @@ export class ItheumClient {
         );
 
         const encodedSignature = bs58.encode(signature);
+
+        const newNftsDetails: {
+            id: string;
+            metadata: IDataNFT;
+            musicPlaylist: IMusicPlaylist;
+        }[] = [];
 
         for (const nft of newNfts) {
             const metadataResponse = await fetch(nft.content.json_uri);
@@ -92,26 +101,31 @@ export class ItheumClient {
                 viewDataArgs.headers
             );
             if (response.ok) {
-                const data = await response.json();
-                console.log(data);
+                const musicPlaylist: IMusicPlaylist = await response.json();
+                newNftsDetails.push({
+                    id: nft.id,
+                    metadata,
+                    musicPlaylist,
+                });
             } else {
                 console.error("Failed to fetch data from NFT", response);
             }
         }
 
-        this.processedNfts.push(...newNfts);
+        this.processedNfts.push(...newNfts.map((nft) => nft.id.toString()));
+        return newNftsDetails;
     }
 
     public async checkNewNfts(): Promise<DasApiAsset[]> {
         elizaLogger.log("🚀 Checking new NFTs...");
 
         const latestNfts = await this.checkNftBalance(
-            "JAWEFUJSWErkDj8RefehQXGp1nUhCoWbtZnpeo8Db8KN"
+            "JAWEFUJSWErkDj8RefehQXGp1nUhCoWbtZnpeo8Db8KN" // a list of whitelisted collections
         );
         const newNfts = latestNfts.filter(
             (nft) =>
                 !this.processedNfts.some((processedNft) =>
-                    processedNft.id.includes(nft.id)
+                    processedNft.includes(nft.id)
                 )
         );
         return newNfts;
