@@ -196,7 +196,7 @@ export class TwitterPostClient {
         this.twitterUsername = runtime.getSetting("TWITTER_USERNAME");
     }
 
-    private async generateNewTweet() {
+    public async generateNewTweet(tweetContent?: string, template?: string) {
         elizaLogger.log("Generating new tweet");
 
         try {
@@ -218,7 +218,7 @@ export class TwitterPostClient {
                     roomId: roomId,
                     agentId: this.runtime.agentId,
                     content: {
-                        text: topics || "",
+                        text: tweetContent ?? (topics || ""),
                         action: "TWEET",
                     },
                 },
@@ -230,8 +230,9 @@ export class TwitterPostClient {
             const context = composeContext({
                 state,
                 template:
-                    this.runtime.character.templates?.twitterPostTemplate ||
-                    twitterPostTemplate,
+                    template ??
+                    (this.runtime.character.templates?.twitterPostTemplate ||
+                        twitterPostTemplate),
             });
 
             console.log("twitter context:\n" + context);
