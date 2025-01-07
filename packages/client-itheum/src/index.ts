@@ -24,7 +24,7 @@ export const ItheumClientInterface: Client = {
         const itheumClient = new ItheumClient(
             runtime,
             mplBubblegumProvider,
-            "SD",
+            "S1",
             keypair
         );
 

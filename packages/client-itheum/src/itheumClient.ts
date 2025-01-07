@@ -1,10 +1,13 @@
 import { elizaLogger, IAgentRuntime } from "@elizaos/core";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import {
+    base58,
     DasApiAsset,
     MplBubblegumProvider,
 } from "@elizaos/plugin-mpl-bubblegum";
 import nacl from "tweetnacl";
+import bs58 from "bs58";
+import { IDataNFT } from "./interfaces";
 
 export class ItheumClient {
     private runtime: IAgentRuntime;
@@ -66,11 +69,12 @@ export class ItheumClient {
             this.keypair.secretKey
         );
 
-        const encodedSignature = Buffer.from(signature).toString("hex");
+        const encodedSignature = bs58.encode(signature);
 
         for (const nft of newNfts) {
-            console.log(nft.content.json_uri);
-            // music nft
+            const metadataResponse = await fetch(nft.content.json_uri);
+
+            const metadata: IDataNFT = await metadataResponse.json();
 
             const viewDataArgs = {
                 headers: {
@@ -88,12 +92,11 @@ export class ItheumClient {
                 viewDataArgs.headers
             );
             if (response.ok) {
-                //fetch was good
-                console.log("fetch good");
+                const data = await response.json();
+                console.log(data);
             } else {
-                console.log("fetch bad");
+                console.error("Failed to fetch data from NFT", response);
             }
-            // do more with response here
         }
 
         this.processedNfts.push(...newNfts);
@@ -103,7 +106,7 @@ export class ItheumClient {
         elizaLogger.log("🚀 Checking new NFTs...");
 
         const latestNfts = await this.checkNftBalance(
-            "68U3PakyLevtZ2A87iBS7JKuWeha2bcCfLdD8tY1SZ9u"
+            "JAWEFUJSWErkDj8RefehQXGp1nUhCoWbtZnpeo8Db8KN"
         );
         const newNfts = latestNfts.filter(
             (nft) =>
@@ -146,6 +149,7 @@ export class ItheumClient {
         cacheDurationSeconds?: number
     ): Promise<Response> {
         let accessUrl = `${this.dataMarshalApi}/access?nonce=${nonce}&NFTId=${assetId}&signature=${signature}&chainId=${this.chainId}&accessRequesterAddr=${address.toBase58()}`;
+
         if (streamInLine) {
             accessUrl += `&streamInLine=1`;
         }
