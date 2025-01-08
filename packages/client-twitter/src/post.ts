@@ -196,13 +196,17 @@ export class TwitterPostClient {
         this.twitterUsername = runtime.getSetting("TWITTER_USERNAME");
     }
 
-    public async generateNewTweet(tweetContent?: string, template?: string) {
+    public async generateNewTweet(
+        template?: string,
+        additionalParams?: { key: string; value: any }[]
+    ) {
         elizaLogger.log("Generating new tweet");
 
         try {
             const roomId = stringToUuid(
                 "twitter_generate_room-" + this.client.profile.username
             );
+
             await this.runtime.ensureUserExists(
                 this.runtime.agentId,
                 this.client.profile.username,
@@ -212,19 +216,31 @@ export class TwitterPostClient {
 
             const topics = this.runtime.character.topics.join(", ");
 
+            const dynamicState = additionalParams?.reduce(
+                (acc, param) => ({
+                    ...acc,
+                    [param.key]: Array.isArray(param.value)
+                        ? param.value.join(", ")
+                        : param.value,
+                }),
+                {
+                    twitterUserName: this.client.profile.username,
+                }
+            ) || {
+                twitterUserName: this.client.profile.username,
+            };
+
             const state = await this.runtime.composeState(
                 {
                     userId: this.runtime.agentId,
                     roomId: roomId,
                     agentId: this.runtime.agentId,
                     content: {
-                        text: tweetContent ?? (topics || ""),
+                        text: topics || "",
                         action: "TWEET",
                     },
                 },
-                {
-                    twitterUserName: this.client.profile.username,
-                }
+                dynamicState
             );
 
             const context = composeContext({
