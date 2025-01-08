@@ -9,6 +9,7 @@ import nacl from "tweetnacl";
 import bs58 from "bs58";
 import { IDataNFT, IMusicPlaylist } from "./interfaces";
 import { TwitterManager } from "@elizaos/client-twitter";
+import { ClientBase } from "./base.ts";
 
 const twitterPostTemplate = `
 # Areas of Expertise
@@ -52,10 +53,8 @@ Write the announcement without any additional commentary or meta-discussion. Gen
 Your response should not contain any questions. Brief, concise statements only.The total character count MUST be less than {{maxTweetLength}}. No emojis. Use \\n\\n (double spaces) between statements if there are multiple statements in your response.`;
 
 export class ItheumClient {
-    private runtime: IAgentRuntime;
+    private client: ClientBase;
     private mplBubblegumProvider: MplBubblegumProvider;
-    // TO DO: add db adapter
-    private processedNfts: string[] = [];
     private dataMarshalApi: string;
     private chainId: string;
     private keypair: Keypair;
@@ -67,7 +66,7 @@ export class ItheumClient {
         keypair: Keypair
     ) {
         elizaLogger.log("📱 Constructing new ItheumClient...");
-        this.runtime = runtime;
+        this.client = new ClientBase(runtime);
         this.mplBubblegumProvider = mplBubblegumProvider;
         this.dataMarshalApi = this.getDataMarshalApi(chainId);
         this.chainId = chainId;
@@ -90,8 +89,9 @@ export class ItheumClient {
         const handleFetchLoop = async () => {
             const nftsDetails = await this.fetchDataFromNfts();
 
+            // TO DO: abstract twitter manager in the client
             const twitterManager = new TwitterManager(
-                this.runtime,
+                this.client.runtime,
                 enableSearch
             );
 
@@ -137,8 +137,10 @@ export class ItheumClient {
 
             setTimeout(
                 handleFetchLoop,
-                Number(this.runtime.getSetting("ITHEUM_FETCH_INTERVAL") || 60) *
-                    1000 // default to 60 seconds
+                Number(
+                    this.client.runtime.getSetting("ITHEUM_FETCH_INTERVAL") ||
+                        60
+                ) * 1000 // default to 60 seconds
             );
         };
         handleFetchLoop();
@@ -199,7 +201,7 @@ export class ItheumClient {
             }
         }
 
-        this.processedNfts.push(...newNfts.map((nft) => nft.id.toString()));
+        this.client.appendAssetIds(newNfts.map((nft) => nft.id));
         return newNftsDetails;
     }
 
@@ -207,14 +209,18 @@ export class ItheumClient {
         elizaLogger.log("🚀 Checking new NFTs...");
 
         const latestNfts = await this.checkNftBalance(
-            "JAWEFUJSWErkDj8RefehQXGp1nUhCoWbtZnpeo8Db8KN" // a list of whitelisted cNFT collections
+            "JAWEFUJSWErkDj8RefehQXGp1nUhCoWbtZnpeo8Db8KN"
         );
+
+        const processedAssetIds = await this.client.getAssetIds();
+
         const newNfts = latestNfts.filter(
-            (nft) =>
-                !this.processedNfts.some((processedNft) =>
-                    processedNft.includes(nft.id)
-                )
+            (nft) => !processedAssetIds.includes(nft.id)
         );
+
+        if (newNfts.length === 0) {
+            elizaLogger.log("No new NFTs found");
+        }
         return newNfts;
     }
 
