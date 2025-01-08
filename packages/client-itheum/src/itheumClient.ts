@@ -26,18 +26,22 @@ const twitterPostTemplate = `
 {{postDirections}}
 
 # Task: Generate a post in the voice and style and perspective of {{agentName}} @{{twitterUserName}} about an enthusiastic music data NFT drop/release announcement.
-Write a post that is {{adjective}} about {{topic}} (without mentioning {{topic}} directly), from the perspective of {{agentName}}.
 Your response should be 1, 2, or 3 sentences (choose the length at random).
 
 Write a social media post that announces and celebrates receiving a new  music data NFT, following these parameters:
 
-NFT Details: {{tweetContent}}
+Album Title: {{albumTitle}}
+Artist: {{artist}}
+Artwork Uri: {{artwork}}
+Audio preview: {{audioPreview}}
+Total Tracks: {{totalTracks}}
+Hashtags: {{hashtags}}
 
 Style Guidelines:
 - Use an excited, enthusiastic tone
 - Include emojis where natural
 - Format as a short announcement
-- End with the preview link
+- End with the audio/mpeg uri
 - Maintain authentic social media voice
 - Keep the message concise but informative
 
@@ -91,9 +95,34 @@ export class ItheumClient {
             await twitterManager.client.init();
 
             for (const nftDetails of nftsDetails) {
+                const additionalParams = [
+                    { key: "hashtags", value: ["#DataNFT", "#ItheumDataNft"] },
+                    {
+                        key: "albumTitle",
+                        value: nftDetails.musicPlaylist.data_stream.name,
+                    },
+                    {
+                        key: "artist",
+                        value: nftDetails.musicPlaylist.data_stream.creator,
+                    },
+                    {
+                        key: "artwork",
+                        value: nftDetails.metadata.animation_url,
+                    },
+                    {
+                        key: "audioPreview",
+                        value: nftDetails.metadata.properties.files[1].uri,
+                    },
+                    {
+                        key: "totalTracks",
+                        value: nftDetails.musicPlaylist.data_stream
+                            .marshalManifest.totalItems,
+                    },
+                ];
+
                 await twitterManager.post.generateNewTweet(
-                    JSON.stringify(nftDetails),
-                    twitterPostTemplate
+                    twitterPostTemplate,
+                    additionalParams
                 );
             }
 
@@ -169,7 +198,7 @@ export class ItheumClient {
         elizaLogger.log("🚀 Checking new NFTs...");
 
         const latestNfts = await this.checkNftBalance(
-            "JAWEFUJSWErkDj8RefehQXGp1nUhCoWbtZnpeo8Db8KN" // a list of whitelisted collections
+            "JAWEFUJSWErkDj8RefehQXGp1nUhCoWbtZnpeo8Db8KN" // a list of whitelisted cNFT collections
         );
         const newNfts = latestNfts.filter(
             (nft) =>

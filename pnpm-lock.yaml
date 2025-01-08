@@ -622,6 +622,9 @@ importers:
 
   packages/client-itheum:
     dependencies:
+      '@elizaos/client-twitter':
+        specifier: workspace:*
+        version: link:../client-twitter
       '@elizaos/core':
         specifier: workspace:*
         version: link:../core
