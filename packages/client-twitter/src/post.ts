@@ -198,7 +198,11 @@ export class TwitterPostClient {
 
     public async generateNewTweet(
         template?: string,
-        additionalParams?: { key: string; value: any }[]
+        additionalParams?: { key: string; value: any }[],
+        mediaData?: {
+            data: Buffer;
+            mediaType: string;
+        }[]
     ) {
         elizaLogger.log("Generating new tweet");
 
@@ -258,7 +262,7 @@ export class TwitterPostClient {
             const newTweetContent = await generateText({
                 runtime: this.runtime,
                 context,
-                modelClass: ModelClass.SMALL,
+                modelClass: ModelClass.MEDIUM,
             });
 
             // First attempt to clean content
@@ -322,7 +326,9 @@ export class TwitterPostClient {
                 const result = await this.client.requestQueue.add(
                     async () =>
                         await this.client.twitterClient.sendTweet(
-                            cleanedContent
+                            cleanedContent,
+                            undefined,
+                            mediaData
                         )
                 );
                 const body = await result.json();
@@ -426,7 +432,7 @@ export class TwitterPostClient {
         try {
             const jsonResponse = JSON.parse(cleanedResponse);
             if (jsonResponse.text) {
-                return this.trimTweetLength(jsonResponse.text);
+                return this.trimTweetLength(jsonResponse.text, 500);
             }
             if (typeof jsonResponse === "object") {
                 const possibleContent =
@@ -434,7 +440,7 @@ export class TwitterPostClient {
                     jsonResponse.message ||
                     jsonResponse.response;
                 if (possibleContent) {
-                    return this.trimTweetLength(possibleContent);
+                    return this.trimTweetLength(possibleContent, 500);
                 }
             }
         } catch (error) {
@@ -445,7 +451,7 @@ export class TwitterPostClient {
         }
 
         // If not JSON or no valid content found, clean the raw text
-        return this.trimTweetLength(cleanedResponse);
+        return this.trimTweetLength(cleanedResponse, 500);
     }
 
     // Helper method to ensure tweet length compliance

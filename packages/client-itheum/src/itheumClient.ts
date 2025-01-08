@@ -26,24 +26,27 @@ const twitterPostTemplate = `
 {{postDirections}}
 
 # Task: Generate a post in the voice and style and perspective of {{agentName}} @{{twitterUserName}} about an enthusiastic music data NFT drop/release announcement.
-Your response should be 1, 2, or 3 sentences (choose the length at random).
-
+Your response should be 1 or 2 sentences (choose the length at random).
 Write a social media post that announces and celebrates receiving a new  music data NFT, following these parameters:
 
-Album Title: {{albumTitle}}
+Album: {{albumTitle}}
 Artist: {{artist}}
-Artwork Uri: {{artwork}}
-Audio preview: {{audioPreview}}
 Total Tracks: {{totalTracks}}
+Audio Preview: {{audioPreview}}
 Hashtags: {{hashtags}}
 
-Style Guidelines:
-- Use an excited, enthusiastic tone
-- Include emojis where natural
-- Format as a short announcement
-- End with the audio/mpeg uri
-- Maintain authentic social media voice
-- Keep the message concise but informative
+Guidelines:
+- Write in natural sentences (avoid "featuring X tracks" or listing details)
+- Keep it conversational and fluid
+- Place preview link at the end followed by hashtags
+- Maintain excitement without formal announcement structure
+- No "I'm excited to announce" or similar formal phrases
+
+Example format:
+"Just dropped {{albumTitle}} by {{artist}} 🎵 Check out these {{totalTracks}} tracks here: {{audioPreview}} \\n\\n #hashtags"
+
+Instead of:
+"I'm thrilled to announce that I've acquired [album name] featuring [X] tracks..."
 
 Write the announcement without any additional commentary or meta-discussion. Generate only the announcement post itself.
 Your response should not contain any questions. Brief, concise statements only.The total character count MUST be less than {{maxTweetLength}}. No emojis. Use \\n\\n (double spaces) between statements if there are multiple statements in your response.`;
@@ -107,7 +110,7 @@ export class ItheumClient {
                     },
                     {
                         key: "artwork",
-                        value: nftDetails.metadata.animation_url,
+                        value: nftDetails.metadata.properties.files[0].uri,
                     },
                     {
                         key: "audioPreview",
@@ -120,9 +123,15 @@ export class ItheumClient {
                     },
                 ];
 
+                const artwork = await this.processSingleMediaFile(
+                    nftDetails.metadata.properties.files[0].uri as string,
+                    nftDetails.metadata.properties.files[0].type as string
+                );
+
                 await twitterManager.post.generateNewTweet(
                     twitterPostTemplate,
-                    additionalParams
+                    additionalParams,
+                    [artwork]
                 );
             }
 
@@ -263,6 +272,86 @@ export class ItheumClient {
         const response = await fetch(preaccessUrl);
         const data = await response.json();
         return data.nonce;
+    }
+
+    private async processSingleMediaFile(fileUri: string, fileType: string) {
+        try {
+            const response = await fetch(fileUri);
+            const arrayBuffer = await response.arrayBuffer();
+            let buffer = Buffer.from(arrayBuffer);
+
+            // Compress if it's a GIF and over 4.5MB
+            if (fileType === "image/gif" && buffer.length > 5 * 1024 * 1024) {
+                console.log(
+                    "GIF size before compression:",
+                    buffer.length / 1024 / 1024,
+                    "MB"
+                );
+                buffer = await this.compressGif(buffer);
+                console.log(
+                    "GIF size after compression:",
+                    buffer.length / 1024 / 1024,
+                    "MB"
+                );
+            }
+
+            return {
+                data: buffer,
+                mediaType: fileType || "image/jpeg",
+            };
+        } catch (error) {
+            console.error("Error processing media file:", error);
+            throw error;
+        }
+    }
+
+    private async compressGif(mediaData: Buffer): Promise<Buffer> {
+        try {
+            const sharpModule = await import("sharp");
+            const sharp = sharpModule.default;
+
+            const image = sharp(mediaData, { animated: true });
+            const metadata = await image.metadata();
+
+            const targetSize = 5 * 1024 * 1024;
+            const ratio = Math.min(1, targetSize / mediaData.length);
+
+            const newWidth = Math.round(metadata.width * Math.sqrt(ratio));
+            const newHeight = Math.round(metadata.height * Math.sqrt(ratio));
+
+            let compressedBuffer = await image
+                .resize(newWidth, newHeight, {
+                    fit: "inside",
+                    withoutEnlargement: true,
+                })
+                .gif({
+                    colours: 128,
+                    effort: 10,
+                    dither: 0.8,
+                    interFrameMaxError: 8,
+                    interPaletteMaxError: 3,
+                })
+                .toBuffer();
+
+            // If still too large, apply more aggressive compression
+            if (compressedBuffer.length > targetSize) {
+                compressedBuffer = await image
+                    .resize(newWidth, newHeight)
+                    .gif({
+                        colours: 64,
+                        effort: 7,
+                        dither: 0.5,
+                        interFrameMaxError: 12,
+                        interPaletteMaxError: 6,
+                    })
+                    .toBuffer();
+            }
+
+            return compressedBuffer;
+        } catch (error) {
+            console.error("Error compressing GIF:", error);
+            throw error;
+        }
     }
 
     private getDataMarshalApi(chainId: string): string {
