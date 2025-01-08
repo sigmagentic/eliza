@@ -664,6 +664,9 @@ importers:
       multer:
         specifier: 1.4.5-lts.1
         version: 1.4.5-lts.1
+      sharp:
+        specifier: 0.33.5
+        version: 0.33.5
       tweetnacl:
         specifier: ^1.0.3
         version: 1.0.3
