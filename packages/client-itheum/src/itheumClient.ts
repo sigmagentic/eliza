@@ -105,88 +105,84 @@ export class ItheumClient {
         };
         handleFetchLoop();
 
-        const handleListingsLoop = async () => {
+        const handleTensorLoops = async () => {
             try {
-                const { listings } = await this.checkTensorActivity();
+                const { listings, buys } = await this.checkTensorActivity();
 
-                for (const listing of listings) {
-                    const additionalParams = [
-                        {
-                            key: "assetId",
-                            value: listing.onchainId,
-                        },
-                        {
-                            key: "timeline",
-                            value: getRelativeTime(listing.txAt),
-                        },
-                        {
-                            key: "url",
-                            value: `https://www.tensor.trade/item/${listing.onchainId}`,
-                        },
-                    ];
+                const processListings = async () => {
+                    try {
+                        for (const listing of listings) {
+                            const additionalParams = [
+                                {
+                                    key: "assetId",
+                                    value: listing.onchainId,
+                                },
+                                {
+                                    key: "timeline",
+                                    value: getRelativeTime(listing.txAt),
+                                },
+                                {
+                                    key: "url",
+                                    value: `https://www.tensor.trade/item/${listing.onchainId}`,
+                                },
+                            ];
 
-                    await sleep(20 + Math.random() * 100);
-                    await this.twitterManager.post.generateNewTweet(
-                        twitterPostTensorListingsTemplate,
-                        additionalParams
-                    );
-                }
+                            await sleep(20 + Math.random() * 100);
+                            await this.twitterManager.post.generateNewTweet(
+                                twitterPostTensorListingsTemplate,
+                                additionalParams
+                            );
+                        }
+                    } catch (error) {
+                        console.error("Error processing listings:", error);
+                    }
+                };
+
+                const processBuys = async () => {
+                    try {
+                        for (const buy of buys) {
+                            const additionalParams = [
+                                {
+                                    key: "assetId",
+                                    value: buy.onchainId,
+                                },
+                                {
+                                    key: "timeline",
+                                    value: getRelativeTime(buy.txAt),
+                                },
+                                {
+                                    key: "url",
+                                    value: `https://www.tensor.trade/item/${buy.onchainId}`,
+                                },
+                            ];
+
+                            await sleep(20 + Math.random() * 180);
+                            await this.twitterManager.post.generateNewTweet(
+                                twitterPostTensorBuysTemplate,
+                                additionalParams
+                            );
+                        }
+                    } catch (error) {
+                        console.error("Error processing buys:", error);
+                    }
+                };
+
+                await Promise.all([processListings(), processBuys()]);
             } catch (error) {
-                console.error("Error in listings loop:", error);
+                console.error("Error in tensor loops:", error);
             } finally {
                 setTimeout(
-                    handleListingsLoop,
+                    handleTensorLoops,
                     Number(
                         this.client.runtime.getSetting(
                             "ITHEUM_TENSOR_INTERVAL"
-                        ) || 1800
+                        ) || 30
                     ) * 1000
                 );
             }
         };
 
-        const handleBuysLoop = async () => {
-            try {
-                const { buys } = await this.checkTensorActivity();
-
-                for (const buy of buys) {
-                    const additionalParams = [
-                        {
-                            key: "assetId",
-                            value: buy.onchainId,
-                        },
-                        {
-                            key: "timeline",
-                            value: getRelativeTime(buy.txAt),
-                        },
-                        {
-                            key: "url",
-                            value: `https://www.tensor.trade/item/${buy.onchainId}`,
-                        },
-                    ];
-
-                    await sleep(20 + Math.random() * 180);
-                    await this.twitterManager.post.generateNewTweet(
-                        twitterPostTensorBuysTemplate,
-                        additionalParams
-                    );
-                }
-            } catch (error) {
-                console.error("Error in buys loop:", error);
-            } finally {
-                setTimeout(
-                    handleBuysLoop,
-                    Number(
-                        this.client.runtime.getSetting(
-                            "ITHEUM_TENSOR_INTERVAL"
-                        ) || 1800
-                    ) * 1000
-                );
-            }
-        };
-
-        handleListingsLoop();
-        handleBuysLoop();
+        handleTensorLoops();
     }
 
     public async fetchDataFromNfts(): Promise<
@@ -310,12 +306,16 @@ export class ItheumClient {
             await this.client.tensorListings.append(
                 newListings.map((listing) => listing.onchainId)
             );
+        } else {
+            elizaLogger.log("No new listings found");
         }
 
         if (newBuys.length > 0) {
             await this.client.tensorBuys.append(
                 newBuys.map((buy) => buy.onchainId)
             );
+        } else {
+            elizaLogger.log("No new buys found");
         }
 
         return {
