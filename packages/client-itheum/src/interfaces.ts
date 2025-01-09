@@ -49,3 +49,19 @@ export interface IMusicPlaylist {
     data_stream: DataStream;
     data: Track[];
 }
+
+export interface TensorResponse {
+    data: {
+        recentTransactionsV2: {
+            txs: Array<{
+                tx: {
+                    txType: "SALE_BUY_NOW" | "LIST";
+                    txAt: number;
+                };
+                mint: {
+                    onchainId: string;
+                };
+            }>;
+        };
+    };
+}

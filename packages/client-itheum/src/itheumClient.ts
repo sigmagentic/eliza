@@ -7,50 +7,15 @@ import {
 } from "@elizaos/plugin-mpl-bubblegum";
 import nacl from "tweetnacl";
 import bs58 from "bs58";
-import { IDataNFT, IMusicPlaylist } from "./interfaces";
+import { IDataNFT, IMusicPlaylist, TensorResponse } from "./interfaces";
 import { TwitterManager } from "@elizaos/client-twitter";
 import { ClientBase } from "./base.ts";
-
-const twitterPostTemplate = `
-# Areas of Expertise
-{{knowledge}}
-
-# About {{agentName}} (@{{twitterUserName}}):
-{{bio}}
-{{lore}}
-{{topics}}
-
-{{providers}}
-
-{{characterPostExamples}}
-
-{{postDirections}}
-
-# Task: Generate a post in the voice and style and perspective of {{agentName}} @{{twitterUserName}} about an enthusiastic music data NFT drop/release announcement.
-Your response should be 1 or 2 sentences (choose the length at random).
-Write a social media post that announces and celebrates receiving a new  music data NFT, following these parameters:
-
-Album: {{albumTitle}}
-Artist: {{artist}}
-Total Tracks: {{totalTracks}}
-Audio Preview: {{audioPreview}}
-Hashtags: {{hashtags}}
-
-Guidelines:
-- Write in natural sentences (avoid "featuring X tracks" or listing details)
-- Keep it conversational and fluid
-- Place preview link at the end followed by hashtags
-- Maintain excitement without formal announcement structure
-- No "I'm excited to announce" or similar formal phrases
-
-Example format:
-"Just dropped {{albumTitle}} by {{artist}} 🎵 Check out these {{totalTracks}} tracks here: {{audioPreview}} \\n\\n #hashtags"
-
-Instead of:
-"I'm thrilled to announce that I've acquired [album name] featuring [X] tracks..."
-
-Write the announcement without any additional commentary or meta-discussion. Generate only the announcement post itself.
-Your response should not contain any questions. Brief, concise statements only.The total character count MUST be less than {{maxTweetLength}}. No emojis. Use \\n\\n (double spaces) between statements if there are multiple statements in your response.`;
+import {
+    twitterPostHoldingsTemplate,
+    twitterPostTensorBuysTemplate,
+    twitterPostTensorListingsTemplate,
+} from "./templates.ts";
+import { getRelativeTime, sleep } from "./utils.ts";
 
 export class ItheumClient {
     private client: ClientBase;
@@ -58,6 +23,7 @@ export class ItheumClient {
     private dataMarshalApi: string;
     private chainId: string;
     private keypair: Keypair;
+    private twitterManager: TwitterManager;
 
     constructor(
         runtime: IAgentRuntime,
@@ -71,31 +37,25 @@ export class ItheumClient {
         this.dataMarshalApi = this.getDataMarshalApi(chainId);
         this.chainId = chainId;
         this.keypair = keypair;
+        this.twitterManager = new TwitterManager(this.client.runtime, false);
     }
 
     public async start(): Promise<void> {
         elizaLogger.log("🚀 Starting Itheum client...");
         try {
-            await this.initializeClient(true); // enableSearch
+            await this.twitterManager.client.init();
+            await this.initializeClient();
         } catch (error) {
             elizaLogger.error("❌ Failed to launch Itheum client:", error);
             throw error;
         }
     }
 
-    public async initializeClient(enableSearch: boolean): Promise<void> {
+    public async initializeClient(): Promise<void> {
         elizaLogger.log("🚀 Initializing Itheum client...");
 
         const handleFetchLoop = async () => {
             const nftsDetails = await this.fetchDataFromNfts();
-
-            // TO DO: abstract twitter manager in the client
-            const twitterManager = new TwitterManager(
-                this.client.runtime,
-                enableSearch
-            );
-
-            await twitterManager.client.init();
 
             for (const nftDetails of nftsDetails) {
                 const additionalParams = [
@@ -128,8 +88,8 @@ export class ItheumClient {
                     nftDetails.metadata.properties.files[0].type as string
                 );
 
-                await twitterManager.post.generateNewTweet(
-                    twitterPostTemplate,
+                await this.twitterManager.post.generateNewTweet(
+                    twitterPostHoldingsTemplate,
                     additionalParams,
                     [artwork]
                 );
@@ -144,6 +104,89 @@ export class ItheumClient {
             );
         };
         handleFetchLoop();
+
+        const handleListingsLoop = async () => {
+            try {
+                const { listings } = await this.checkTensorActivity();
+
+                for (const listing of listings) {
+                    const additionalParams = [
+                        {
+                            key: "assetId",
+                            value: listing.onchainId,
+                        },
+                        {
+                            key: "timeline",
+                            value: getRelativeTime(listing.txAt),
+                        },
+                        {
+                            key: "url",
+                            value: `https://www.tensor.trade/item/${listing.onchainId}`,
+                        },
+                    ];
+
+                    await sleep(20 + Math.random() * 100);
+                    await this.twitterManager.post.generateNewTweet(
+                        twitterPostTensorListingsTemplate,
+                        additionalParams
+                    );
+                }
+            } catch (error) {
+                console.error("Error in listings loop:", error);
+            } finally {
+                setTimeout(
+                    handleListingsLoop,
+                    Number(
+                        this.client.runtime.getSetting(
+                            "ITHEUM_TENSOR_INTERVAL"
+                        ) || 1800
+                    ) * 1000
+                );
+            }
+        };
+
+        const handleBuysLoop = async () => {
+            try {
+                const { buys } = await this.checkTensorActivity();
+
+                for (const buy of buys) {
+                    const additionalParams = [
+                        {
+                            key: "assetId",
+                            value: buy.onchainId,
+                        },
+                        {
+                            key: "timeline",
+                            value: getRelativeTime(buy.txAt),
+                        },
+                        {
+                            key: "url",
+                            value: `https://www.tensor.trade/item/${buy.onchainId}`,
+                        },
+                    ];
+
+                    await sleep(20 + Math.random() * 180);
+                    await this.twitterManager.post.generateNewTweet(
+                        twitterPostTensorBuysTemplate,
+                        additionalParams
+                    );
+                }
+            } catch (error) {
+                console.error("Error in buys loop:", error);
+            } finally {
+                setTimeout(
+                    handleBuysLoop,
+                    Number(
+                        this.client.runtime.getSetting(
+                            "ITHEUM_TENSOR_INTERVAL"
+                        ) || 1800
+                    ) * 1000
+                );
+            }
+        };
+
+        handleListingsLoop();
+        handleBuysLoop();
     }
 
     public async fetchDataFromNfts(): Promise<
@@ -201,7 +244,7 @@ export class ItheumClient {
             }
         }
 
-        this.client.appendAssetIds(newNfts.map((nft) => nft.id));
+        this.client.holdings.append(newNfts.map((nft) => nft.id));
         return newNftsDetails;
     }
 
@@ -212,7 +255,7 @@ export class ItheumClient {
             "JAWEFUJSWErkDj8RefehQXGp1nUhCoWbtZnpeo8Db8KN"
         );
 
-        const processedAssetIds = await this.client.getAssetIds();
+        const processedAssetIds = await this.client.holdings.getAll();
 
         const newNfts = latestNfts.filter(
             (nft) => !processedAssetIds.includes(nft.id)
@@ -242,6 +285,98 @@ export class ItheumClient {
                 collections.includes(group.group_value)
             )
         );
+    }
+
+    public async checkTensorActivity() {
+        elizaLogger.log("🚀 Checking tensor activity...");
+
+        const processedListings: string[] =
+            await this.client.tensorListings.getAll();
+        const processedBuys: string[] = await this.client.tensorBuys.getAll();
+
+        const latestTensorActivity: TensorResponse =
+            await this.getTensorActivity();
+        const { listings, buys } =
+            this.parseTensorActivity(latestTensorActivity);
+
+        const newListings = listings.filter(
+            (listing) => !processedListings.includes(listing.onchainId)
+        );
+        const newBuys = buys.filter(
+            (buy) => !processedBuys.includes(buy.onchainId)
+        );
+
+        if (newListings.length > 0) {
+            await this.client.tensorListings.append(
+                newListings.map((listing) => listing.onchainId)
+            );
+        }
+
+        if (newBuys.length > 0) {
+            await this.client.tensorBuys.append(
+                newBuys.map((buy) => buy.onchainId)
+            );
+        }
+
+        return {
+            listings: newListings,
+            buys: newBuys,
+        };
+    }
+
+    public async getTensorActivity(): Promise<TensorResponse> {
+        const postQuery = `https://graphql.tensor.trade/graphql`;
+        const graphQl = {
+            operationName: "RecentTransactions",
+            variables: {
+                slug: "db2b6fbc-64b9-4209-9bdb-497e55571e5a",
+                limit: 50,
+                keepLatestListDelistOnly: false,
+                filters: {
+                    txTypes: ["SALE_BUY_NOW", "LIST"],
+                    mps: null,
+                    prices: null,
+                    traitCount: null,
+                    traits: null,
+                },
+            },
+            query: "query RecentTransactions($slug: String, $keepLatestListDelistOnly: Boolean!, $filters: TransactionsFilters, $limit: Int) { recentTransactionsV2(slug: $slug, keepLatestListDelistOnly: $keepLatestListDelistOnly, filters: $filters, limit: $limit) { txs { tx { txType txAt } mint { onchainId } } } }",
+        };
+
+        const response = await fetch(postQuery, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(graphQl),
+        });
+
+        const data = (await response.json()) as TensorResponse;
+
+        return data;
+    }
+
+    public parseTensorActivity(response: TensorResponse) {
+        const activity = response.data.recentTransactionsV2.txs;
+
+        const listings = activity
+            .filter((tx) => tx.tx.txType === "LIST")
+            .map((tx) => ({
+                onchainId: tx.mint.onchainId,
+                txAt: tx.tx.txAt,
+            }));
+
+        const buys = activity
+            .filter((tx) => tx.tx.txType === "SALE_BUY_NOW")
+            .map((tx) => ({
+                onchainId: tx.mint.onchainId,
+                txAt: tx.tx.txAt,
+            }));
+
+        return {
+            listings,
+            buys,
+        };
     }
 
     public async viewData(
