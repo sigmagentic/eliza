@@ -7,6 +7,8 @@ import { LensAgentClient } from "@elizaos/client-lens";
 import { SlackClientInterface } from "@elizaos/client-slack";
 import { TelegramClientInterface } from "@elizaos/client-telegram";
 import { TwitterClientInterface } from "@elizaos/client-twitter";
+import { ItheumClientInterface } from "@elizaos/client-itheum";
+
 import {
     AgentRuntime,
     CacheManager,
@@ -54,6 +56,7 @@ import { nearPlugin } from "@elizaos/plugin-near";
 import { nftGenerationPlugin } from "@elizaos/plugin-nft-generation";
 import { createNodePlugin } from "@elizaos/plugin-node";
 import { solanaPlugin } from "@elizaos/plugin-solana";
+import { mplBubblegumPlugin } from "@elizaos/plugin-mpl-bubblegum";
 import { suiPlugin } from "@elizaos/plugin-sui";
 import { TEEMode, teePlugin } from "@elizaos/plugin-tee";
 import { tonPlugin } from "@elizaos/plugin-ton";
@@ -430,6 +433,13 @@ export async function initializeClients(
         clients.lens = lensClient;
     }
 
+    if (clientTypes.includes(Clients.ITHEUM)) {
+        const itheumClient = await ItheumClientInterface.start(runtime);
+        if (itheumClient) {
+            clients.itheum = itheumClient;
+        }
+    }
+
     elizaLogger.log("client keys", Object.keys(clients));
 
     // TODO: Add Slack client to the list
@@ -521,10 +531,11 @@ export async function createAgent(
         // character.plugins are handled when clients are added
         plugins: [
             bootstrapPlugin,
-            getSecret(character, "CONFLUX_CORE_PRIVATE_KEY")
-                ? confluxPlugin
-                : null,
             nodePlugin,
+            getSecret(character, "MPL_BUBBLEGUM_PRIVATE_KEY") &&
+            getSecret(character, "MPL_BUBBLEGUM_RPC_URL")
+                ? mplBubblegumPlugin
+                : null,
             getSecret(character, "SOLANA_PUBLIC_KEY") ||
             (getSecret(character, "WALLET_PUBLIC_KEY") &&
                 !getSecret(character, "WALLET_PUBLIC_KEY")?.startsWith("0x"))
