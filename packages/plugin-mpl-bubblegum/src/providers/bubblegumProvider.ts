@@ -36,10 +36,6 @@ import {
     GetAssetProofRpcResponse,
 } from "@metaplex-foundation/digital-asset-standard-api";
 import { base58 } from "@metaplex-foundation/umi/serializers";
-import { IAgentRuntime, Memory, Provider, State } from "@elizaos/core";
-import { getWalletKey } from "../utils";
-import { validateMplBubblegumConfig } from "../environment";
-import { fromWeb3JsKeypair } from "@metaplex-foundation/umi-web3js-adapters";
 
 export type Signature = string;
 
@@ -48,10 +44,11 @@ export class MplBubblegumProvider {
     private readonly keypair?: Keypair;
 
     constructor(rpcUrl: string, keypair?: Keypair) {
-        const umi = createUmi(rpcUrl)
-            .use(keypair ? keypairIdentity(keypair) : undefined)
-            .use(mplBubblegum())
-            .use(dasApi());
+        const umi = createUmi(rpcUrl);
+        if (keypair) {
+            umi.use(keypairIdentity(keypair));
+        }
+        umi.use(mplBubblegum()).use(dasApi());
 
         this.umi = umi as Umi & { rpc: DasApiInterface };
         this.keypair = keypair;
