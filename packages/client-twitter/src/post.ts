@@ -407,6 +407,7 @@ export class TwitterPostClient {
             const roomId = stringToUuid(
                 "twitter_generate_room-" + this.client.profile.username
             );
+
             await this.runtime.ensureUserExists(
                 this.runtime.agentId,
                 this.client.profile.username,
@@ -415,6 +416,20 @@ export class TwitterPostClient {
             );
 
             const topics = this.runtime.character.topics.join(", ");
+
+            const dynamicState = additionalParams?.reduce(
+                (acc, param) => ({
+                    ...acc,
+                    [param.key]: Array.isArray(param.value)
+                        ? param.value.join(", ")
+                        : param.value,
+                }),
+                {
+                    twitterUserName: this.client.profile.username,
+                }
+            ) || {
+                twitterUserName: this.client.profile.username,
+            };
 
             const state = await this.runtime.composeState(
                 {
@@ -426,16 +441,15 @@ export class TwitterPostClient {
                         action: "TWEET",
                     },
                 },
-                {
-                    twitterUserName: this.client.profile.username,
-                }
+                dynamicState
             );
 
             const context = composeContext({
                 state,
                 template:
-                    this.runtime.character.templates?.twitterPostTemplate ||
-                    twitterPostTemplate,
+                    template ??
+                    (this.runtime.character.templates?.twitterPostTemplate ||
+                        twitterPostTemplate),
             });
 
             elizaLogger.debug("generate post prompt:\n" + context);
@@ -443,7 +457,7 @@ export class TwitterPostClient {
             const newTweetContent = await generateText({
                 runtime: this.runtime,
                 context,
-                modelClass: ModelClass.SMALL,
+                modelClass: ModelClass.MEDIUM,
             });
 
             // First attempt to clean content
@@ -554,7 +568,7 @@ export class TwitterPostClient {
         try {
             const jsonResponse = JSON.parse(cleanedResponse);
             if (jsonResponse.text) {
-                return this.trimTweetLength(jsonResponse.text);
+                return this.trimTweetLength(jsonResponse.text, 500);
             }
             if (typeof jsonResponse === "object") {
                 const possibleContent =
@@ -562,7 +576,7 @@ export class TwitterPostClient {
                     jsonResponse.message ||
                     jsonResponse.response;
                 if (possibleContent) {
-                    return this.trimTweetLength(possibleContent);
+                    return this.trimTweetLength(possibleContent, 500);
                 }
             }
         } catch (error) {
@@ -573,7 +587,7 @@ export class TwitterPostClient {
         }
 
         // If not JSON or no valid content found, clean the raw text
-        return this.trimTweetLength(cleanedResponse);
+        return this.trimTweetLength(cleanedResponse, 500);
     }
 
     // Helper method to ensure tweet length compliance
