@@ -77,8 +77,6 @@ Tweet:
 
 # Respond with qualifying action tags only. Default to NO action unless extremely confident of relevance.` +
     postActionResponseFooter;
-# Respond with qualifying action tags only. Default to NO action unless extremely confident of relevance.` +
-    postActionResponseFooter;
 
 interface PendingTweet {
     cleanedContent: string;
@@ -108,7 +106,7 @@ export class TwitterPostClient {
         this.client = client;
         this.runtime = runtime;
         this.twitterUsername = this.client.twitterConfig.TWITTER_USERNAME;
-        this.isDryRun = this.client.twitterConfig.TWITTER_DRY_RUN;;
+        this.isDryRun = this.client.twitterConfig.TWITTER_DRY_RUN;
 
         // Log configuration on initialization
         elizaLogger.log("Twitter Client Configuration:");
