@@ -1,7 +1,7 @@
 {
     "name": "C-3PO",
-    "clients": [],
-    "modelProvider": "anthropic",
+    "clients": ["twitter", "itheum"],
+    "modelProvider": "gaianet",
     "settings": {
         "voice": {
             "model": "en_GB-alan-medium"

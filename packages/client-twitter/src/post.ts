@@ -457,7 +457,10 @@ export class TwitterPostClient {
     /**
      * Generates and posts a new tweet. If isDryRun is true, only logs what would have been posted.
      */
-    async generateNewTweet() {
+    public async generateNewTweet(
+        template?: string,
+        additionalParams?: { key: string; value: any }[]
+    ) {
         elizaLogger.log("Generating new tweet");
 
         try {
@@ -473,6 +476,20 @@ export class TwitterPostClient {
 
             const topics = this.runtime.character.topics.join(", ");
 
+            const dynamicState = additionalParams?.reduce(
+                (acc, param) => ({
+                    ...acc,
+                    [param.key]: Array.isArray(param.value)
+                        ? param.value.join(", ")
+                        : param.value,
+                }),
+                {
+                    twitterUserName: this.client.profile.username,
+                }
+            ) || {
+                twitterUserName: this.client.profile.username,
+            };
+
             const state = await this.runtime.composeState(
                 {
                     userId: this.runtime.agentId,
@@ -483,16 +500,15 @@ export class TwitterPostClient {
                         action: "TWEET",
                     },
                 },
-                {
-                    twitterUserName: this.client.profile.username,
-                }
+                dynamicState
             );
 
             const context = composeContext({
                 state,
                 template:
-                    this.runtime.character.templates?.twitterPostTemplate ||
-                    twitterPostTemplate,
+                    template ??
+                    (this.runtime.character.templates?.twitterPostTemplate ||
+                        twitterPostTemplate),
             });
 
             elizaLogger.debug("generate post prompt:\n" + context);
