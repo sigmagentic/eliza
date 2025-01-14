@@ -36,7 +36,7 @@ export class ItheumClient {
         chainId: string,
         keypair: Keypair
     ) {
-        elizaLogger.log("📱 Constructing new ItheumClient...");
+        elizaLogger.log("Itheum: 📱 Constructing new ItheumClient...");
         this.client = new ClientBase(runtime);
         this.mplBubblegumProvider = mplBubblegumProvider;
         this.dataMarshalApi = this.getDataMarshalApi(chainId);
@@ -46,7 +46,7 @@ export class ItheumClient {
     }
 
     public async start(): Promise<void> {
-        elizaLogger.log("🚀 Starting Itheum client...");
+        elizaLogger.log("Itheum: 🚀 Starting Itheum client...");
         try {
             const twitterConfig: TwitterConfig = await validateTwitterConfig(
                 this.runtime
@@ -65,14 +65,18 @@ export class ItheumClient {
     }
 
     public async initializeClient(): Promise<void> {
-        elizaLogger.log("🚀 Initializing Itheum client...");
+        elizaLogger.log("Itheum: 🚀 Initializing Itheum client...");
 
         const handleFetchLoop = async () => {
             const nftsDetails = await this.fetchDataFromNfts();
 
+            elizaLogger.log(
+                `Itheum: nftsDetails =  ${JSON.stringify(nftsDetails)}`
+            );
+
             for (const nftDetails of nftsDetails) {
                 const additionalParams = [
-                    { key: "hashtags", value: ["#DataNFT", "#ItheumDataNft"] },
+                    // { key: "hashtags", value: ["#DataNFT", "#ItheumDataNft"] },
                     {
                         key: "albumTitle",
                         value: nftDetails.musicPlaylist.data_stream.name,
@@ -195,7 +199,7 @@ export class ItheumClient {
     public async fetchDataFromNfts(): Promise<
         { id: string; metadata: IDataNFT; musicPlaylist: IMusicPlaylist }[]
     > {
-        elizaLogger.log("🚀 Fetching data from NFT...");
+        elizaLogger.log("Itheum: 🚀 Fetching data from inside Data NFT...");
         const newNfts = await this.checkNewNfts();
 
         const nonce = await this.preaccess();
@@ -252,7 +256,7 @@ export class ItheumClient {
     }
 
     public async checkNewNfts(): Promise<DasApiAsset[]> {
-        elizaLogger.log("🚀 Checking new NFTs...");
+        elizaLogger.log("Itheum: 🚀 Checking for new Data NFTs...");
 
         const latestNfts = await this.checkNftBalance(
             "JAWEFUJSWErkDj8RefehQXGp1nUhCoWbtZnpeo8Db8KN"
@@ -265,7 +269,7 @@ export class ItheumClient {
         );
 
         if (newNfts.length === 0) {
-            elizaLogger.log("No new NFTs found");
+            elizaLogger.log("Itheum: No new Data NFTs found");
         }
         return newNfts;
     }
@@ -273,7 +277,7 @@ export class ItheumClient {
     public async checkNftBalance(
         collection: string | string[]
     ): Promise<DasApiAsset[]> {
-        elizaLogger.log("🚀 Checking NFT balance...");
+        elizaLogger.log("Itheum: 🚀 Checking Data NFT balance...");
 
         const nfts = await this.mplBubblegumProvider.getAssetsByOwner(
             this.mplBubblegumProvider.getKeypairPublicKey()
@@ -291,7 +295,7 @@ export class ItheumClient {
     }
 
     public async checkTensorActivity() {
-        elizaLogger.log("🚀 Checking tensor activity...");
+        elizaLogger.log("Itheum: 🚀 Checking tensor trade activity...");
 
         const processedListings: string[] =
             await this.client.tensorListings.getAll();
@@ -314,7 +318,7 @@ export class ItheumClient {
                 newListings.map((listing) => listing.onchainId)
             );
         } else {
-            elizaLogger.log("No new listings found");
+            elizaLogger.log("Itheum: No new listings found");
         }
 
         if (newBuys.length > 0) {
@@ -322,7 +326,7 @@ export class ItheumClient {
                 newBuys.map((buy) => buy.onchainId)
             );
         } else {
-            elizaLogger.log("No new buys found");
+            elizaLogger.log("Itheum: No new buys found");
         }
 
         return {
