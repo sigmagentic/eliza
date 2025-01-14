@@ -106,14 +106,19 @@ export class ItheumClient {
                 );
             }
 
-            setTimeout(
-                handleFetchLoop,
+            const recheckDataNFTsIntervalMS =
                 Number(
                     this.client.runtime.getSetting("ITHEUM_FETCH_INTERVAL") ||
                         60
-                ) * 1000 // default to 60 seconds
+                ) * 1000; // default to 60 seconds
+
+            elizaLogger.log(
+                `Itheum: Checking for new data nfts every ${recheckDataNFTsIntervalMS / 1000 / 60} mins...`
             );
+
+            setTimeout(handleFetchLoop, recheckDataNFTsIntervalMS);
         };
+
         handleFetchLoop();
 
         const handleTensorLoops = async () => {
@@ -182,14 +187,18 @@ export class ItheumClient {
             } catch (error) {
                 console.error("Error in tensor loops:", error);
             } finally {
-                setTimeout(
-                    handleTensorLoops,
+                const recheckTensorIntervalMS =
                     Number(
                         this.client.runtime.getSetting(
                             "ITHEUM_TENSOR_INTERVAL"
                         ) || 30
-                    ) * 1000
+                    ) * 1000; // default to 30 seconds
+
+                elizaLogger.log(
+                    `Itheum: Checking for tensor activity every ${recheckTensorIntervalMS / 1000 / 60} mins...`
                 );
+
+                setTimeout(handleTensorLoops, recheckTensorIntervalMS);
             }
         };
 

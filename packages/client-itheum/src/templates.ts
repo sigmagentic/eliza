@@ -72,7 +72,6 @@ Guidelines:
 
 Example format:
 "dope! a new listing on the music nft collection of tensor. check it out: {{url}}"
-"new listing on tensor for a music nft. explore it here: {{url}}"
 
 Write the announcement without any additional commentary or meta-discussion. Generate only the announcement post itself.
 Your response should not contain any questions. Brief, concise statements only.The total character count MUST be less than {{maxTweetLength}}. No emojis. Use \\n\\n (double spaces) between statements if there are multiple statements in your response.`;
@@ -110,7 +109,6 @@ Guidelines:
 
 Example format:
 "someone just bought a music nft from an artist i represent on Tensor. Check it out: {{url}}"
-"new purchase on tensor for a music nft from an artist i represent. explore it here: {{url}}"
 
 Write the announcement without any additional commentary or meta-discussion. Generate only the announcement post itself.
 Your response should not contain any questions. Brief, concise statements only. The total character count MUST be less than {{maxTweetLength}}. No emojis. Use \\n\\n (double spaces) between statements if there are multiple statements in your response.`;
