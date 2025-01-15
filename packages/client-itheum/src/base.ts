@@ -65,7 +65,7 @@ export class CacheStorage<T> {
 export class ClientBase extends EventEmitter {
     runtime: IAgentRuntime;
 
-    public readonly holdings: CacheStorage<PublicKey>;
+    public readonly holdings: CacheStorage<string>;
     public readonly tensorListings: CacheStorage<string>;
     public readonly tensorBuys: CacheStorage<string>;
 
@@ -73,7 +73,7 @@ export class ClientBase extends EventEmitter {
         super();
         this.runtime = runtime;
 
-        this.holdings = new CacheStorage<PublicKey>(
+        this.holdings = new CacheStorage<string>(
             runtime,
             "bubblegum/assetIds",
             (a, b) => a.toString() === b.toString()

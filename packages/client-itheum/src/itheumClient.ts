@@ -76,7 +76,6 @@ export class ItheumClient {
 
             for (const nftDetails of nftsDetails) {
                 const additionalParams = [
-                    // { key: "hashtags", value: ["#DataNFT", "#ItheumDataNft"] },
                     {
                         key: "albumTitle",
                         value: nftDetails.musicPlaylist.data_stream.name,
@@ -104,6 +103,8 @@ export class ItheumClient {
                     twitterPostHoldingsTemplate,
                     additionalParams
                 );
+
+                await this.client.holdings.append(nftDetails.id);
             }
 
             const recheckDataNFTsIntervalMS =
@@ -148,6 +149,10 @@ export class ItheumClient {
                                 twitterPostTensorListingsTemplate,
                                 additionalParams
                             );
+
+                            await this.client.tensorListings.append(
+                                listing.onchainId
+                            );
                         }
                     } catch (error) {
                         console.error("Error processing listings:", error);
@@ -177,6 +182,8 @@ export class ItheumClient {
                                 twitterPostTensorBuysTemplate,
                                 additionalParams
                             );
+
+                            await this.client.tensorBuys.append(buy.onchainId);
                         }
                     } catch (error) {
                         console.error("Error processing buys:", error);
@@ -260,7 +267,6 @@ export class ItheumClient {
             }
         }
 
-        this.client.holdings.append(newNfts.map((nft) => nft.id));
         return newNftsDetails;
     }
 
@@ -322,19 +328,11 @@ export class ItheumClient {
             (buy) => !processedBuys.includes(buy.onchainId)
         );
 
-        if (newListings.length > 0) {
-            await this.client.tensorListings.append(
-                newListings.map((listing) => listing.onchainId)
-            );
-        } else {
+        if (newListings.length <= 0) {
             elizaLogger.log("Itheum: No new listings found");
         }
 
-        if (newBuys.length > 0) {
-            await this.client.tensorBuys.append(
-                newBuys.map((buy) => buy.onchainId)
-            );
-        } else {
+        if (newBuys.length <= 0) {
             elizaLogger.log("Itheum: No new buys found");
         }
 

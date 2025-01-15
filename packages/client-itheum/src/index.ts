@@ -5,7 +5,6 @@ import {
     fromWeb3JsKeypair,
     getWalletKey,
     MplBubblegumProvider,
-    toWeb3JsKeypair,
 } from "@elizaos/plugin-mpl-bubblegum";
 
 export const ItheumClientInterface: Client = {
