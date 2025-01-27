@@ -1,5 +1,4 @@
 import { IAgentRuntime } from "@elizaos/core";
-import { MplBubblegumProvider, PublicKey } from "@elizaos/plugin-mpl-bubblegum";
 import { EventEmitter } from "events";
 
 export class CacheStorage<T> {
