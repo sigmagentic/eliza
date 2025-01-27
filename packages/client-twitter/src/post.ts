@@ -465,7 +465,8 @@ export class TwitterPostClient {
      */
     public async generateNewTweet(
         template?: string,
-        additionalParams?: { key: string; value: any }[]
+        additionalParams?: { key: string; value: any }[],
+        checkSimilarity: boolean = true
     ) {
         elizaLogger.log("Generating new tweet");
 
@@ -575,24 +576,29 @@ export class TwitterPostClient {
             // Final cleaning
             cleanedContent = removeQuotes(fixNewLines(cleanedContent));
 
-            // Custom logic to bypass the post if it's similar with all posts by a threshold value
-            const embeddedContent = await embed(this.runtime, cleanedContent);
-
-            const similarPosts =
-                await this.runtime.messageManager.searchMemoriesByEmbedding(
-                    embeddedContent,
-                    {
-                        match_threshold: 0.8,
-                        count: 10,
-                        roomId: roomId, // only twitter posts room
-                    }
+            if (checkSimilarity) {
+                // Custom logic to bypass the post if it's similar with all posts by a threshold value
+                const embeddedContent = await embed(
+                    this.runtime,
+                    cleanedContent
                 );
 
-            if (similarPosts.length >= 6) {
-                elizaLogger.log(
-                    `Skipping post due to similarity with previous posts: ${similarPosts.length}`
-                );
-                return;
+                const similarPosts =
+                    await this.runtime.messageManager.searchMemoriesByEmbedding(
+                        embeddedContent,
+                        {
+                            match_threshold: 0.8,
+                            count: 10,
+                            roomId: roomId, // only twitter posts room
+                        }
+                    );
+
+                if (similarPosts.length >= 6) {
+                    elizaLogger.log(
+                        `Skipping post due to similarity with previous posts: ${similarPosts.length}`
+                    );
+                    return;
+                }
             }
 
             if (this.isDryRun) {

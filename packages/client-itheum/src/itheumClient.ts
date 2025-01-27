@@ -101,7 +101,8 @@ export class ItheumClient {
 
                 await this.twitterManager.post.generateNewTweet(
                     twitterPostHoldingsTemplate,
-                    additionalParams
+                    additionalParams,
+                    false
                 );
 
                 await this.client.holdings.append(nftDetails.id);
@@ -147,7 +148,8 @@ export class ItheumClient {
                             await sleep(20 + Math.random() * 100);
                             await this.twitterManager.post.generateNewTweet(
                                 twitterPostTensorListingsTemplate,
-                                additionalParams
+                                additionalParams,
+                                false
                             );
 
                             await this.client.tensorListings.append(
@@ -180,7 +182,8 @@ export class ItheumClient {
                             await sleep(20 + Math.random() * 180);
                             await this.twitterManager.post.generateNewTweet(
                                 twitterPostTensorBuysTemplate,
-                                additionalParams
+                                additionalParams,
+                                false
                             );
 
                             await this.client.tensorBuys.append(buy.onchainId);
