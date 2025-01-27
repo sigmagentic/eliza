@@ -17,7 +17,6 @@ export const twitterPostHoldingsTemplate = `
 Your response should be 1 or 2 sentences (choose the length at random).
 Write a social media post that announces and celebrates receiving a new music nft, following these parameters:
 
-Album: {{albumTitle}}
 Artist: {{artist}}
 Total Tracks: {{totalTracks}}
 Audio Preview: {{audioPreview}}
@@ -31,7 +30,7 @@ Guidelines:
 - No "I'm excited to announce" or similar formal phrases
 
 Example format:
-"Just dropped {{albumTitle}} by {{artist}} on sigmamusic.fm 🎵 Check out these {{totalTracks}} tracks here, preview a sample here: {{audioPreview}}"
+"Just dropped a new album by {{artist}} on sigmamusic.fm 🎵 The album has {{totalTracks}} tracks, preview a sample here: {{audioPreview}}"
 
 Instead of:
 "I'm thrilled to announce that I've acquired [album name] featuring [X] tracks..."
