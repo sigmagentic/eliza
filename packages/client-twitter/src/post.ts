@@ -575,6 +575,7 @@ export class TwitterPostClient {
 
             // Final cleaning
             cleanedContent = removeQuotes(fixNewLines(cleanedContent));
+            console.log("cleanedContent", cleanedContent);
 
             if (checkSimilarity) {
                 // Custom logic to bypass the post if it's similar with all posts by a threshold value
@@ -587,13 +588,14 @@ export class TwitterPostClient {
                     await this.runtime.messageManager.searchMemoriesByEmbedding(
                         embeddedContent,
                         {
-                            match_threshold: 0.8,
+                            match_threshold: 0.9,
                             count: 10,
                             roomId: roomId, // only twitter posts room
                         }
                     );
 
-                if (similarPosts.length >= 6) {
+                if (similarPosts.length >= 10) {
+                    console.log("similarPosts", similarPosts);
                     elizaLogger.log(
                         `Skipping post due to similarity with previous posts: ${similarPosts.length}`
                     );
