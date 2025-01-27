@@ -9,6 +9,7 @@ import {
     TemplateType,
     UUID,
     truncateToCompleteSentence,
+    embed,
 } from "@elizaos/core";
 import { elizaLogger } from "@elizaos/core";
 import { ClientBase } from "./base.ts";
@@ -45,7 +46,12 @@ const twitterPostTemplate = `
 
 {{postDirections}}
 
+
+Recent posts by {{agentName}}:
+{{recentPosts}}
+
 # Task: Generate a post in the voice and style and perspective of {{agentName}} @{{twitterUserName}}.
+The post should not repeat the same content as the recent posts above.
 Write a post that is {{adjective}} about {{topic}} (without mentioning {{topic}} directly), from the perspective of {{agentName}}. Do not add commentary or acknowledge this request, just write the post.
 Your response should be 1, 2, or 3 sentences (choose the length at random).
 Your response should not contain any questions. Brief, concise statements only. The total character count MUST be less than {{maxTweetLength}}. No emojis. Use \\n\\n (double spaces) between statements if there are multiple statements in your response.`;
@@ -568,6 +574,26 @@ export class TwitterPostClient {
 
             // Final cleaning
             cleanedContent = removeQuotes(fixNewLines(cleanedContent));
+
+            // Custom logic to bypass the post if it's similar with all posts by a threshold value
+            const embeddedContent = await embed(this.runtime, cleanedContent);
+
+            const similarPosts =
+                await this.runtime.messageManager.searchMemoriesByEmbedding(
+                    embeddedContent,
+                    {
+                        match_threshold: 0.8,
+                        count: 10,
+                        roomId: roomId, // only twitter posts room
+                    }
+                );
+
+            if (similarPosts.length >= 6) {
+                elizaLogger.log(
+                    `Skipping post due to similarity with previous posts: ${similarPosts.length}`
+                );
+                return;
+            }
 
             if (this.isDryRun) {
                 elizaLogger.info(
