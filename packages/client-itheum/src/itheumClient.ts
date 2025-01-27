@@ -222,14 +222,11 @@ export class ItheumClient {
         const newNfts = await this.checkNewNfts();
 
         const nonce = await this.preaccess();
-
         const nonceEncoded = new TextEncoder().encode(nonce);
-
         const signature = nacl.sign.detached(
             nonceEncoded,
             this.keypair.secretKey
         );
-
         const encodedSignature = bs58.encode(signature);
 
         const newNftsDetails: {
@@ -239,34 +236,64 @@ export class ItheumClient {
         }[] = [];
 
         for (const nft of newNfts) {
-            const metadataResponse = await fetch(nft.content.json_uri);
+            try {
+                // Note that Data NFTs metadata is either stored via pinata or lighthouse
+                // ... but we always try to get it from the original IPFS gateway first
+                let metadataResponse = await fetch(nft.content.json_uri);
 
-            const metadata: IDataNFT = await metadataResponse.json();
+                if (!metadataResponse.ok) {
+                    // Extract CID from the original URI
+                    const cid = nft.content.json_uri.split("/ipfs/")[1];
 
-            const viewDataArgs = {
-                headers: {
-                    "dmf-custom-sol-collection-id": nft.grouping[0].group_value,
-                },
-                fwdHeaderKeys: ["dmf-custom-sol-collection-id"],
-            };
+                    // Try Pinata gateway
+                    const pinataUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+                    metadataResponse = await fetch(pinataUrl);
 
-            const response = await this.viewData(
-                nft.id,
-                nonce,
-                encodedSignature,
-                new PublicKey(this.mplBubblegumProvider.getKeypairPublicKey()),
-                viewDataArgs.fwdHeaderKeys,
-                viewDataArgs.headers
-            );
-            if (response.ok) {
-                const musicPlaylist: IMusicPlaylist = await response.json();
-                newNftsDetails.push({
-                    id: nft.id,
-                    metadata,
-                    musicPlaylist,
-                });
-            } else {
-                console.error("Failed to fetch data from NFT", response);
+                    if (!metadataResponse.ok) {
+                        // Try Lighthouse gateway as last resort
+                        const lighthouseUrl = `https://gateway.lighthouse.storage/ipfs/${cid}`;
+                        metadataResponse = await fetch(lighthouseUrl);
+
+                        if (!metadataResponse.ok) {
+                            throw new Error(
+                                `Failed to fetch metadata from all IPFS gateways for NFT ${nft.id}`
+                            );
+                        }
+                    }
+                }
+
+                const metadata: IDataNFT = await metadataResponse.json();
+
+                const viewDataArgs = {
+                    headers: {
+                        "dmf-custom-sol-collection-id":
+                            nft.grouping[0].group_value,
+                    },
+                    fwdHeaderKeys: ["dmf-custom-sol-collection-id"],
+                };
+
+                const response = await this.viewData(
+                    nft.id,
+                    nonce,
+                    encodedSignature,
+                    new PublicKey(
+                        this.mplBubblegumProvider.getKeypairPublicKey()
+                    ),
+                    viewDataArgs.fwdHeaderKeys,
+                    viewDataArgs.headers
+                );
+                if (response.ok) {
+                    const musicPlaylist: IMusicPlaylist = await response.json();
+                    newNftsDetails.push({
+                        id: nft.id,
+                        metadata,
+                        musicPlaylist,
+                    });
+                } else {
+                    console.error("Failed to fetch data from NFT", response);
+                }
+            } catch (error) {
+                console.error("Error processing NFT", error);
             }
         }
 
