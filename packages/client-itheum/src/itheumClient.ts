@@ -47,6 +47,7 @@ export class ItheumClient {
 
     public async start(): Promise<void> {
         elizaLogger.log("Itheum: 🚀 Starting Itheum client...");
+
         try {
             const twitterConfig: TwitterConfig = await validateTwitterConfig(
                 this.runtime
@@ -75,35 +76,44 @@ export class ItheumClient {
             );
 
             for (const nftDetails of nftsDetails) {
-                const additionalParams = [
-                    {
-                        key: "albumTitle",
-                        value: nftDetails.musicPlaylist.data_stream.name,
-                    },
-                    {
-                        key: "artist",
-                        value: nftDetails.musicPlaylist.data_stream.creator,
-                    },
-                    {
-                        key: "artwork",
-                        value: nftDetails.metadata.properties.files[0].uri,
-                    },
-                    {
-                        key: "audioPreview",
-                        value: nftDetails.metadata.properties.files[1].uri,
-                    },
-                    {
-                        key: "totalTracks",
-                        value: nftDetails.musicPlaylist.data_stream
-                            .marshalManifest.totalItems,
-                    },
-                ];
+                try {
+                    const additionalParams = [
+                        {
+                            key: "albumTitle",
+                            value:
+                                nftDetails?.musicPlaylist?.data_stream?.name ||
+                                "",
+                        },
+                        {
+                            key: "artist",
+                            value: nftDetails.musicPlaylist.data_stream.creator,
+                        },
+                        {
+                            key: "artwork",
+                            value: nftDetails.metadata.properties.files[0].uri,
+                        },
+                        {
+                            key: "audioPreview",
+                            value: nftDetails.metadata.properties.files[1].uri,
+                        },
+                        {
+                            key: "totalTracks",
+                            value: nftDetails.musicPlaylist.data_stream
+                                .marshalManifest.totalItems,
+                        },
+                    ];
 
-                await this.twitterManager.post.generateNewTweet(
-                    twitterPostHoldingsTemplate,
-                    additionalParams,
-                    false
-                );
+                    await this.twitterManager.post.generateNewTweet(
+                        twitterPostHoldingsTemplate,
+                        additionalParams,
+                        false
+                    );
+                } catch (e) {
+                    console.error(
+                        "Error extracting data from data NFT for unexpected reason so skipping it and saving the id to cache so we don't process it again",
+                        e
+                    );
+                }
 
                 await this.client.holdings.append(nftDetails.id);
             }
@@ -344,6 +354,7 @@ export class ItheumClient {
 
         const processedListings: string[] =
             await this.client.tensorListings.getAll();
+
         const processedBuys: string[] = await this.client.tensorBuys.getAll();
 
         const latestTensorActivity: TensorResponse =

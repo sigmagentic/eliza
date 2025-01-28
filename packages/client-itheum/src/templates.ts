@@ -28,6 +28,7 @@ Guidelines:
 - Place preview link at the end
 - Maintain excitement without formal announcement structure
 - No "I'm excited to announce" or similar formal phrases
+- Make sure to maintain the exact, original text format for the Audio Preview link, do not alter it or make it lowercase, etc.
 
 Example format:
 "Just dropped a new album by {{artist}} on sigmamusic.fm 🎵 The album has {{totalTracks}} tracks, preview a sample here: {{audioPreview}}"
