@@ -4,7 +4,6 @@ import { ItheumManager } from "agent-sdk";
 import bs58 from "bs58";
 import * as fs from "fs";
 import * as path from "path";
-
 export class ItheumService extends Service {
     private manager: ItheumManager;
     private connection: Connection;
@@ -21,16 +20,16 @@ export class ItheumService extends Service {
     async initialize(runtime: IAgentRuntime): Promise<void> {
         // Initialize Solana connection
         this.connection = new Connection(
-            runtime.getSetting("HELIUS_RPC_URL") ||
+            runtime.getSetting("SOLANA_RPC_URL") ||
                 "https://api.mainnet-beta.solana.com",
             "confirmed"
         );
 
         // Initialize keypair from environment variable
-        const privateKey = runtime.getSetting("WALLET_PRIVATE_KEY");
+        const privateKey = runtime.getSetting("SOLANA_PRIVATE_KEY");
         if (!privateKey) {
             throw new Error(
-                "WALLET_PRIVATE_KEY environment variable is required"
+                "SOLANA_PRIVATE_KEY environment variable is required"
             );
         }
 
@@ -50,7 +49,7 @@ export class ItheumService extends Service {
                 runtime.getSetting("ITHEUM_MINT_URL") ||
                 process.env.ITHEUM_MINT_URL,
             priorityFee:
-                Number(runtime.getSetting("PRIORITY_FEE")) ||
+                Number(runtime.getSetting("ITHEUM_PRIORITY_FEE")) ||
                 Number(process.env.PRIORITY_FEE) ||
                 0,
         });
