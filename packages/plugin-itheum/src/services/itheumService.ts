@@ -3,14 +3,39 @@ import { Connection, Keypair } from "@solana/web3.js";
 import { ItheumManager } from "agent-sdk";
 import bs58 from "bs58";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 export class ItheumService extends Service {
     private manager: ItheumManager;
     private connection: Connection;
     private keypair: Keypair;
+    private basePath: string;
 
-    constructor() {
+    constructor(basePath?: string) {
         super();
+        this.basePath = path.resolve(
+            basePath || path.join(os.tmpdir(), "itheum-temp")
+        );
+        this.createTempFolderStructure();
+    }
+
+    getBasePath(): string {
+        return this.basePath;
+    }
+
+    private createTempFolderStructure(): void {
+        const assetsPath = path.join(this.basePath, "assets");
+        if (!fs.existsSync(assetsPath)) {
+            fs.mkdirSync(assetsPath, { recursive: true });
+        }
+
+        const folders = ["audio", "images"];
+        for (const folder of folders) {
+            const folderPath = path.join(assetsPath, folder);
+            if (!fs.existsSync(folderPath)) {
+                fs.mkdirSync(folderPath);
+            }
+        }
     }
 
     static get serviceType() {
@@ -56,7 +81,6 @@ export class ItheumService extends Service {
     }
 
     async uploadMusicNFTs(params: {
-        folderPath: string;
         playlist: {
             name: string;
             creator: string;
@@ -73,9 +97,15 @@ export class ItheumService extends Service {
         };
     }) {
         try {
-            const result = await this.manager.buildUploadMintMusicNFTs(params);
+            const result = await this.manager.buildUploadMintMusicNFTs({
+                folderPath: path.join(this.basePath, "assets"),
+                ...params,
+            });
             // automatically remove the tmp folder
-            fs.rmSync(params.folderPath, { recursive: true, force: true });
+            fs.rmSync(path.join(this.basePath, "assets"), {
+                recursive: true,
+                force: true,
+            });
             return result;
         } catch (error) {
             console.error("Failed to upload music NFTs:", error);
@@ -83,28 +113,22 @@ export class ItheumService extends Service {
         }
     }
 
-    private async createTempFolderStructure(basePath: string): Promise<void> {
-        const fs = require("fs");
-        const path = require("path");
-
-        // Create base assets folder if it doesn't exist
-        const assetsPath = path.join(basePath, "assets");
-        if (!fs.existsSync(assetsPath)) {
-            fs.mkdirSync(assetsPath, { recursive: true });
-        }
-
-        // Create subfolders
-        const folders = ["audio", "images"];
-        for (const folder of folders) {
-            const folderPath = path.join(assetsPath, folder);
-            if (!fs.existsSync(folderPath)) {
-                fs.mkdirSync(folderPath);
-            }
-        }
+    private async storeBufferToFile(
+        buffer: Buffer,
+        subFolder: string,
+        fileName: string
+    ): Promise<string> {
+        const filePath = path.join(
+            this.basePath,
+            "assets",
+            subFolder,
+            fileName
+        );
+        await fs.promises.writeFile(filePath, buffer);
+        return filePath;
     }
 
     private async saveTrackData(
-        basePath: string,
         trackData: Buffer,
         trackMetadata: {
             artist: string;
@@ -114,20 +138,15 @@ export class ItheumService extends Service {
         },
         trackNumber: number
     ): Promise<void> {
-        const fs = require("fs");
-        const path = require("path");
-
-        // Save audio file
-        const audioPath = path.join(
-            basePath,
-            "assets",
+        // Save audio file using the generic method
+        await this.storeBufferToFile(
+            trackData,
             "audio",
             `track${trackNumber}.mp3`
         );
-        await fs.promises.writeFile(audioPath, trackData);
 
         // Update info.json
-        const infoPath = path.join(basePath, "assets", "info.json");
+        const infoPath = path.join(this.basePath, "assets", "info.json");
         let trackInfo = [];
 
         if (fs.existsSync(infoPath)) {
@@ -147,32 +166,35 @@ export class ItheumService extends Service {
         );
     }
 
-    private async saveAnimationFile(
-        basePath: string,
-        animationData: Buffer,
-        extension: string = "gif" // Default to gif if no extension provided
-    ): Promise<string> {
-        const fs = require("fs");
-        const path = require("path");
-        const fetch = require("node-fetch");
-
-        const animationPath = path.join(
-            basePath,
-            "assets",
-            "images",
-            `animation.${extension}`
+    async storeTrackToFolder(params: {
+        track: {
+            data: Buffer;
+            metadata: {
+                artist: string;
+                album: string;
+                title: string;
+                category: string;
+            };
+            image: Buffer;
+        };
+        trackNumber: number;
+    }): Promise<void> {
+        await this.saveTrackData(
+            params.track.data,
+            params.track.metadata,
+            params.trackNumber
         );
 
-        // Download from URL
-        const response = await fetch(animationData);
-        const buffer = await response.buffer();
-        await fs.promises.writeFile(animationPath, buffer);
-
-        return animationPath;
+        if (params.track.image) {
+            await this.storeBufferToFile(
+                params.track.image,
+                "images",
+                `track${params.trackNumber}_cover.jpg`
+            );
+        }
     }
 
-    async processAndStoreMusicData(params: {
-        basePath: string;
+    async storeTracksToFolder(params: {
         tracks: Array<{
             data: Buffer;
             metadata: {
@@ -183,42 +205,23 @@ export class ItheumService extends Service {
             };
             image: Buffer;
         }>;
-        animation?: Buffer;
-        animationExtension?: string;
-    }): Promise<string> {
-        await this.createTempFolderStructure(params.basePath);
-
-        // Process each track
+    }): Promise<void> {
         for (let i = 0; i < params.tracks.length; i++) {
-            const track = params.tracks[i];
-            await this.saveTrackData(
-                params.basePath,
-                track.data,
-                track.metadata,
-                i + 1
-            );
-
-            // Save track cover image if provided
-            if (track.image) {
-                const imagePath = path.join(
-                    params.basePath,
-                    "assets",
-                    "images",
-                    `track${i + 1}_cover.jpg`
-                );
-                await fs.promises.writeFile(imagePath, track.image);
-            }
+            await this.storeTrackToFolder({
+                track: params.tracks[i],
+                trackNumber: i + 1,
+            });
         }
+    }
 
-        // Handle animation file if provided
-        if (params.animation) {
-            await this.saveAnimationFile(
-                params.basePath,
-                params.animation,
-                params.animationExtension
-            );
-        }
-
-        return params.basePath;
+    async storeAnimationToFolder(params: {
+        animation: Buffer;
+        extension?: string;
+    }): Promise<string> {
+        return this.storeBufferToFile(
+            params.animation,
+            "images",
+            `animation.${params.extension || "png"}`
+        );
     }
 }
