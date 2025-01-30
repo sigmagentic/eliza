@@ -9,6 +9,7 @@ import {
     TemplateType,
     UUID,
     truncateToCompleteSentence,
+    embed,
 } from "@elizaos/core";
 import { elizaLogger } from "@elizaos/core";
 import { ClientBase } from "./base.ts";
@@ -45,7 +46,12 @@ const twitterPostTemplate = `
 
 {{postDirections}}
 
+
+Recent posts by {{agentName}}:
+{{recentPosts}}
+
 # Task: Generate a post in the voice and style and perspective of {{agentName}} @{{twitterUserName}}.
+The post should not repeat the same content as the recent posts above.
 Write a post that is {{adjective}} about {{topic}} (without mentioning {{topic}} directly), from the perspective of {{agentName}}. Do not add commentary or acknowledge this request, just write the post.
 Your response should be 1, 2, or 3 sentences (choose the length at random).
 Your response should not contain any questions. Brief, concise statements only. The total character count MUST be less than {{maxTweetLength}}. No emojis. Use \\n\\n (double spaces) between statements if there are multiple statements in your response.`;
@@ -457,7 +463,11 @@ export class TwitterPostClient {
     /**
      * Generates and posts a new tweet. If isDryRun is true, only logs what would have been posted.
      */
-    async generateNewTweet() {
+    public async generateNewTweet(
+        template?: string,
+        additionalParams?: { key: string; value: any }[],
+        checkSimilarity: boolean = true
+    ) {
         elizaLogger.log("Generating new tweet");
 
         try {
@@ -473,6 +483,20 @@ export class TwitterPostClient {
 
             const topics = this.runtime.character.topics.join(", ");
 
+            const dynamicState = additionalParams?.reduce(
+                (acc, param) => ({
+                    ...acc,
+                    [param.key]: Array.isArray(param.value)
+                        ? param.value.join(", ")
+                        : param.value,
+                }),
+                {
+                    twitterUserName: this.client.profile.username,
+                }
+            ) || {
+                twitterUserName: this.client.profile.username,
+            };
+
             const state = await this.runtime.composeState(
                 {
                     userId: this.runtime.agentId,
@@ -483,16 +507,15 @@ export class TwitterPostClient {
                         action: "TWEET",
                     },
                 },
-                {
-                    twitterUserName: this.client.profile.username,
-                }
+                dynamicState
             );
 
             const context = composeContext({
                 state,
                 template:
-                    this.runtime.character.templates?.twitterPostTemplate ||
-                    twitterPostTemplate,
+                    template ??
+                    (this.runtime.character.templates?.twitterPostTemplate ||
+                        twitterPostTemplate),
             });
 
             elizaLogger.debug("generate post prompt:\n" + context);
@@ -552,6 +575,33 @@ export class TwitterPostClient {
 
             // Final cleaning
             cleanedContent = removeQuotes(fixNewLines(cleanedContent));
+            console.log("cleanedContent", cleanedContent);
+
+            if (checkSimilarity) {
+                // Custom logic to bypass the post if it's similar with all posts by a threshold value
+                const embeddedContent = await embed(
+                    this.runtime,
+                    cleanedContent
+                );
+
+                const similarPosts =
+                    await this.runtime.messageManager.searchMemoriesByEmbedding(
+                        embeddedContent,
+                        {
+                            match_threshold: 0.9,
+                            count: 10,
+                            roomId: roomId, // only twitter posts room
+                        }
+                    );
+
+                if (similarPosts.length >= 10) {
+                    console.log("similarPosts", similarPosts);
+                    elizaLogger.log(
+                        `Skipping post due to similarity with previous posts: ${similarPosts.length}`
+                    );
+                    return;
+                }
+            }
 
             if (this.isDryRun) {
                 elizaLogger.info(

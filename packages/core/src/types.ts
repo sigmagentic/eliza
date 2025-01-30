@@ -262,8 +262,8 @@ export enum ModelProviderName {
     AKASH_CHAT_API = "akash_chat_api",
     LIVEPEER = "livepeer",
     LETZAI = "letzai",
-    DEEPSEEK="deepseek",
-    INFERA="infera"
+    DEEPSEEK = "deepseek",
+    INFERA = "infera",
 }
 
 /**
@@ -649,6 +649,7 @@ export enum Clients {
     AUTO = "auto",
     SLACK = "slack",
     GITHUB = "github",
+    ITHEUM = "itheum",
 }
 
 export interface IAgentConfig {
@@ -1087,7 +1088,10 @@ export interface IMemoryManager {
     ): Promise<{ embedding: number[]; levenshtein_score: number }[]>;
 
     getMemoryById(id: UUID): Promise<Memory | null>;
-    getMemoriesByRoomIds(params: { roomIds: UUID[], limit?: number }): Promise<Memory[]>;
+    getMemoriesByRoomIds(params: {
+        roomIds: UUID[];
+        limit?: number;
+    }): Promise<Memory[]>;
     searchMemoriesByEmbedding(
         embedding: number[],
         opts: {
@@ -1310,6 +1314,55 @@ export interface ITextGenerationService extends Service {
     getEmbeddingResponse(input: string): Promise<number[] | undefined>;
 }
 
+export interface IItheumService extends Service {
+    getBasePath(): string;
+    initialize(runtime: IAgentRuntime, basePath?: string): Promise<void>;
+    buildUploadMintMusicNFTs(params: {
+        playlist: {
+            name: string;
+            creator: string;
+        };
+        nft: {
+            tokenName: string;
+            sellerFeeBasisPoints: number;
+            quantity: number;
+            name: string;
+            description: string;
+        };
+        animation: {
+            animationFile: string;
+        };
+    }): Promise<any>;
+    storeTrackToFolder(params: {
+        track: {
+            data: Buffer;
+            metadata: {
+                artist: string;
+                album: string;
+                title: string;
+                category: string;
+            };
+            image: Buffer;
+        };
+    }): Promise<void>;
+    storeTracksToFolder(params: {
+        tracks: Array<{
+            data: Buffer;
+            metadata: {
+                artist: string;
+                album: string;
+                title: string;
+                category: string;
+            };
+            image: Buffer;
+        }>;
+    }): Promise<void>;
+    storeAnimationToFolder(params: {
+        animation: Buffer;
+        extension?: string;
+    }): Promise<string>;
+}
+
 export interface IBrowserService extends Service {
     closeBrowser(): Promise<void>;
     getPageContent(
@@ -1378,9 +1431,28 @@ export interface IrysTimestamp {
 }
 
 export interface IIrysService extends Service {
-    getDataFromAnAgent(agentsWalletPublicKeys: string[], tags: GraphQLTag[], timestamp: IrysTimestamp): Promise<DataIrysFetchedFromGQL>;
-    workerUploadDataOnIrys(data: any, dataType: IrysDataType, messageType: IrysMessageType, serviceCategory: string[], protocol: string[], validationThreshold: number[], minimumProviders: number[], testProvider: boolean[], reputation: number[]): Promise<UploadIrysResult>;
-    providerUploadDataOnIrys(data: any, dataType: IrysDataType, serviceCategory: string[], protocol: string[]): Promise<UploadIrysResult>;
+    getDataFromAnAgent(
+        agentsWalletPublicKeys: string[],
+        tags: GraphQLTag[],
+        timestamp: IrysTimestamp
+    ): Promise<DataIrysFetchedFromGQL>;
+    workerUploadDataOnIrys(
+        data: any,
+        dataType: IrysDataType,
+        messageType: IrysMessageType,
+        serviceCategory: string[],
+        protocol: string[],
+        validationThreshold: number[],
+        minimumProviders: number[],
+        testProvider: boolean[],
+        reputation: number[]
+    ): Promise<UploadIrysResult>;
+    providerUploadDataOnIrys(
+        data: any,
+        dataType: IrysDataType,
+        serviceCategory: string[],
+        protocol: string[]
+    ): Promise<UploadIrysResult>;
 }
 
 export interface ITeeLogService extends Service {
@@ -1431,6 +1503,7 @@ export enum ServiceType {
     IRYS = "irys",
     TEE_LOG = "tee_log",
     GOPLUS_SECURITY = "goplus_security",
+    ITHEUM = "itheum",
 }
 
 export enum LoggingLevel {
