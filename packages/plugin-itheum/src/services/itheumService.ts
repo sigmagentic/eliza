@@ -1,40 +1,58 @@
-import { IAgentRuntime, Service, ServiceType } from "@elizaos/core";
+import {
+    elizaLogger,
+    IAgentRuntime,
+    Service,
+    ServiceType,
+} from "@elizaos/core";
 import { Connection, Keypair } from "@solana/web3.js";
 import { ItheumManager } from "agent-sdk";
 import bs58 from "bs58";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import { TrackInfo } from "../types";
+
 export class ItheumService extends Service {
     private manager: ItheumManager;
     private connection: Connection;
     private keypair: Keypair;
     private basePath: string;
+    private items = 0;
 
-    constructor(basePath?: string) {
+    constructor() {
         super();
-        this.basePath = path.resolve(
-            basePath || path.join(os.tmpdir(), "itheum-temp")
-        );
-        this.createTempFolderStructure();
     }
 
     getBasePath(): string {
         return this.basePath;
     }
 
-    private createTempFolderStructure(): void {
+    private removeAndCreateAssetsFolder(): void {
         const assetsPath = path.join(this.basePath, "assets");
-        if (!fs.existsSync(assetsPath)) {
-            fs.mkdirSync(assetsPath, { recursive: true });
+        fs.rmSync(assetsPath, { recursive: true, force: true });
+        fs.mkdirSync(assetsPath, { recursive: true });
+        for (const folder of ["audio", "images"]) {
+            fs.mkdirSync(path.join(assetsPath, folder), { recursive: true });
         }
+    }
 
-        const folders = ["audio", "images"];
-        for (const folder of folders) {
-            const folderPath = path.join(assetsPath, folder);
-            if (!fs.existsSync(folderPath)) {
-                fs.mkdirSync(folderPath);
-            }
+    private readTrackInfo(): TrackInfo {
+        const infoPath = path.join(this.basePath, "assets", "info.json");
+        if (!fs.existsSync(infoPath)) return [];
+        const existingInfo = fs.readFileSync(infoPath, "utf8");
+        return JSON.parse(existingInfo) as TrackInfo;
+    }
+
+    private writeTrackInfo(trackInfo: TrackInfo): void {
+        const infoPath = path.join(this.basePath, "assets", "info.json");
+        fs.writeFileSync(infoPath, JSON.stringify(trackInfo, null, 2));
+    }
+
+    private createTempFolderStructure(): void {
+        try {
+            this.removeAndCreateAssetsFolder();
+        } catch (err) {
+            console.error("Failed to create assets folder structure:", err);
         }
     }
 
@@ -42,7 +60,7 @@ export class ItheumService extends Service {
         return ServiceType.ITHEUM;
     }
 
-    async initialize(runtime: IAgentRuntime): Promise<void> {
+    async initialize(runtime: IAgentRuntime, basePath?: string): Promise<void> {
         // Initialize Solana connection
         this.connection = new Connection(
             runtime.getSetting("SOLANA_RPC_URL") ||
@@ -78,9 +96,15 @@ export class ItheumService extends Service {
                 Number(process.env.PRIORITY_FEE) ||
                 0,
         });
+
+        this.basePath = path.resolve(
+            basePath || path.join(os.tmpdir(), "itheum-temp")
+        );
+
+        this.createTempFolderStructure();
     }
 
-    async uploadMusicNFTs(params: {
+    async buildUploadMintMusicNFTs(params: {
         playlist: {
             name: string;
             creator: string;
@@ -113,22 +137,22 @@ export class ItheumService extends Service {
         }
     }
 
-    private async storeBufferToFile(
+    private storeBufferToFile(
         buffer: Buffer,
         subFolder: string,
         fileName: string
-    ): Promise<string> {
+    ): string {
         const filePath = path.join(
             this.basePath,
             "assets",
             subFolder,
             fileName
         );
-        await fs.promises.writeFile(filePath, buffer);
+        fs.writeFileSync(filePath, buffer);
         return filePath;
     }
 
-    private async saveTrackData(
+    private saveTrackData(
         trackData: Buffer,
         trackMetadata: {
             artist: string;
@@ -137,36 +161,16 @@ export class ItheumService extends Service {
             category: string;
         },
         trackNumber: number
-    ): Promise<void> {
-        // Save audio file using the generic method
-        await this.storeBufferToFile(
-            trackData,
-            "audio",
-            `track${trackNumber}.mp3`
-        );
-
-        // Update info.json
-        const infoPath = path.join(this.basePath, "assets", "info.json");
-        let trackInfo = [];
-
-        if (fs.existsSync(infoPath)) {
-            const existingInfo = await fs.promises.readFile(infoPath, "utf8");
-            trackInfo = JSON.parse(existingInfo);
-        }
-
+    ): void {
+        this.storeBufferToFile(trackData, "audio", `track${trackNumber}.mp3`);
+        let trackInfo = this.readTrackInfo();
         trackInfo.push({
-            [`track${trackNumber}`]: {
-                metadata: trackMetadata,
-            },
+            [`track${trackNumber}`]: { metadata: trackMetadata },
         });
-
-        await fs.promises.writeFile(
-            infoPath,
-            JSON.stringify(trackInfo, null, 2)
-        );
+        this.writeTrackInfo(trackInfo);
     }
 
-    async storeTrackToFolder(params: {
+    storeTrackToFolder(params: {
         track: {
             data: Buffer;
             metadata: {
@@ -177,24 +181,24 @@ export class ItheumService extends Service {
             };
             image: Buffer;
         };
-        trackNumber: number;
-    }): Promise<void> {
-        await this.saveTrackData(
+    }): void {
+        this.items += 1;
+        this.saveTrackData(
             params.track.data,
             params.track.metadata,
-            params.trackNumber
+            this.items
         );
 
         if (params.track.image) {
-            await this.storeBufferToFile(
+            this.storeBufferToFile(
                 params.track.image,
                 "images",
-                `track${params.trackNumber}_cover.jpg`
+                `track${this.items}_cover.jpg`
             );
         }
     }
 
-    async storeTracksToFolder(params: {
+    storeTracksToFolder(params: {
         tracks: Array<{
             data: Buffer;
             metadata: {
@@ -205,22 +209,21 @@ export class ItheumService extends Service {
             };
             image: Buffer;
         }>;
-    }): Promise<void> {
+    }): void {
         for (let i = 0; i < params.tracks.length; i++) {
-            await this.storeTrackToFolder({
+            this.storeTrackToFolder({
                 track: params.tracks[i],
-                trackNumber: i + 1,
             });
         }
     }
 
-    async storeAnimationToFolder(params: {
+    storeAnimationToFolder(params: {
         animation: Buffer;
         extension?: string;
-    }): Promise<string> {
+    }): string {
         return this.storeBufferToFile(
             params.animation,
-            "images",
+            "",
             `animation.${params.extension || "png"}`
         );
     }

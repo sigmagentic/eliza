@@ -40,6 +40,8 @@
         "@elizaos/plugin-allora": "workspace:*",
         "@elizaos/plugin-aptos": "workspace:*",
         "@elizaos/plugin-arthera": "workspace:*",
+        "@elizaos/plugin-itheum": "workspace:*",
+        "@elizaos/plugin-mpl-bubblegum": "workspace:*",
         "@elizaos/plugin-autonome": "workspace:*",
         "@elizaos/plugin-avail": "workspace:*",
         "@elizaos/plugin-avalanche": "workspace:*",

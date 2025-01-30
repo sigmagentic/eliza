@@ -1314,6 +1314,55 @@ export interface ITextGenerationService extends Service {
     getEmbeddingResponse(input: string): Promise<number[] | undefined>;
 }
 
+export interface IItheumService extends Service {
+    getBasePath(): string;
+    initialize(runtime: IAgentRuntime, basePath?: string): Promise<void>;
+    buildUploadMintMusicNFTs(params: {
+        playlist: {
+            name: string;
+            creator: string;
+        };
+        nft: {
+            tokenName: string;
+            sellerFeeBasisPoints: number;
+            quantity: number;
+            name: string;
+            description: string;
+        };
+        animation: {
+            animationFile: string;
+        };
+    }): Promise<any>;
+    storeTrackToFolder(params: {
+        track: {
+            data: Buffer;
+            metadata: {
+                artist: string;
+                album: string;
+                title: string;
+                category: string;
+            };
+            image: Buffer;
+        };
+    }): Promise<void>;
+    storeTracksToFolder(params: {
+        tracks: Array<{
+            data: Buffer;
+            metadata: {
+                artist: string;
+                album: string;
+                title: string;
+                category: string;
+            };
+            image: Buffer;
+        }>;
+    }): Promise<void>;
+    storeAnimationToFolder(params: {
+        animation: Buffer;
+        extension?: string;
+    }): Promise<string>;
+}
+
 export interface IBrowserService extends Service {
     closeBrowser(): Promise<void>;
     getPageContent(
